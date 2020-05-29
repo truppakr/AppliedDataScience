@@ -1,0 +1,1691 @@
+---
+title: "ThulasiRam_RuppaKrishnan_HW4"
+author: "Thulasiram Ruppa Krishnan"
+date: "April 27, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Load libraries
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(RWeka)      # for RWeka
+library(tm)         # for Term Document Matrix
+library(wordcloud)  # for wordclouds
+library(tidytext)   # for AFFN, convert DTM to DF
+library(stringr)
+library(stringi)
+# ONCE: install.packages("Snowball")
+## NOTE Snowball is not yet available for R v 3.5.x
+## So I cannot use it  - yet...
+##library("Snowball")
+##set working directory
+## ONCE: install.packages("slam")
+library(slam)
+library(quanteda)
+## ONCE: install.packages("quanteda")
+## Note - this includes SnowballC
+library(SnowballC)
+library(arules)
+##ONCE: install.packages('proxy')
+library(proxy)
+library(Matrix)
+library(plyr) ## for adply
+library(ggplot2)
+library(mclust) # for Mclust EM clustering
+
+```
+
+## Clear workspace
+```{r}
+# Clear objects
+rm(list=ls())
+## Set your working director to the path were your code AND datafile is
+setwd("~/01 Personal/MS/IST 707/week4/temp/txt")
+getwd()
+#setwd("C://Users//rkrishnan//Documents//01 Personal//MS//IST 707//week4//temp")
+
+```
+
+
+
+```{r}
+EssayCorpus <- Corpus(DirSource("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt",pattern = ".txt"))
+(getTransformations())
+(ndocs<-length(EssayCorpus))
+
+##The following will show you that you read in all the documents
+(summary(EssayCorpus))
+(meta(EssayCorpus[[1]]))
+(meta(EssayCorpus[[1]],5))
+
+# ignore extremely rare words i.e. terms that appear in less then 1% of the documents
+(minTermFreq <- ndocs * 0.0001)
+# ignore overly common words i.e. terms that appear in more than 50% of the documents
+(maxTermFreq <- ndocs * 1)
+(MyStopwords <- c("will", "shall", "may", "might", "can", "must","much","upon","shall"))
+  #stopwords))
+(STOPS <-stopwords('english'))
+Essay_dtm <- DocumentTermMatrix(EssayCorpus,
+                         control = list(
+                           stopwords = TRUE, 
+                           wordLengths=c(3, 15),
+                           removePunctuation = T,
+                           removeNumbers = T,
+                           tolower=T,
+                           stemming = T,
+                           remove_separators = T,
+                           stopwords = MyStopwords,
+                           #removeWords(STOPS),
+                           #removeWords(MyStopwords),
+                           bounds = list(global = c(minTermFreq, maxTermFreq))
+                         ))
+
+
+## Have a look
+tm::inspect(Essay_dtm)
+DTM_mat <- as.matrix(Essay_dtm)
+(DTM_mat[1:74,1:5])
+#Essay_dtm <- weightTfIdf(Essay_dtm, normalize = TRUE)
+#Essay_dtm <- weightTfIdf(Essay_dtm, normalize = FALSE)
+
+## Look at word freuqncies
+(WordFreq <- colSums(as.matrix(Essay_dtm)))
+
+(head(WordFreq))
+(length(WordFreq))
+ord <- order(WordFreq)
+(WordFreq[head(ord)])
+(WordFreq[tail(ord)])
+## Row Sums
+(Row_Sum_Per_doc <- data.frame(Row_Sum_Per_doc=rowSums((as.matrix(Essay_dtm)))))
+Row_Sum_Per_doc$file <-row.names(Row_Sum_Per_doc)
+rownames(Row_Sum_Per_doc)<-NULL
+#plot(y=Row_Sum_Per_doc$Row_Sum_Per_doc,x=Row_Sum_Per_doc$file)
+ggplot(data=Row_Sum_Per_doc) + geom_bar(aes(x=file,y=Row_Sum_Per_doc), stat = "identity",fill=substr(file, 1, 1)) +   theme(legend.position = "top",axis.text.x = element_text(angle = 90, hjust = 1),strip.background = element_rect(fill="lightblue", colour="black",size=0.5),plot.margin = unit(c(1,1,1,1),"cm"))
+## I want to divide each element in each row by the sum of the elements
+## in that row. I will test this on a small matrix first to make 
+## sure that it is doing what I want. YOU should always test ideas
+## on small cases.
+## Create a small pretend matrix
+## Using 1 in apply does rows, using a 2 does columns
+(mymat = matrix(1:12,3,4))
+freqs2 <- apply(mymat, 1, function(i) i/sum(i))
+## Oddly, this re-organizes the matrix - so I need to transpose back
+(t(freqs2)) 
+## OK - so this works. Now I can use this to control the normalization of
+## my matrix...
+
+## Create a normalized version of Essay_dtm
+
+Essay_M_N1 <- apply(DTM_mat, 1, function(i) round(i/sum(i),3))
+## transpose
+Essay_Matrix_Norm <- t(Essay_M_N1)
+## Have a look at the original and the norm to make sure
+(DTM_mat[c(1:6),c(100:105)])
+(Essay_Matrix_Norm[c(1:6),c(100:105)])
+str(Essay_Matrix_Norm)
+#Creating a new Matrix using cbind()  
+#Essay_Matrix_Norm.t <- cbind(Essay_Matrix_Norm.t,Row_Sum_Per_doc$Row_Sum_Per_doc)
+# number of cols
+#length(Essay_Matrix_Norm.t[1,])
+# number of rows
+#length(Essay_Matrix_Norm.t[,1])
+
+#(Essay_Matrix_Norm.t[c(1:6),c(4899:4902)])
+## From the line of code
+## (Row_Sum_Per_doc <- rowSums((as.matrix(Essay_dtm))))
+## above, we can see that Austen_Sense has a row sum of 53102
+## So, we can confirm correctness. For abandon we should have
+## 1/53102 = 1.88 x10-5 which is what we have. 
+
+## Sometimes it is better to normalize your own matrix so that
+## YOU have control over the normalization. For example
+## scale used diectly may not work - why?
+
+## Convert to matrix and view
+Essay_dtm_matrix = as.matrix(Essay_dtm)
+str(Essay_dtm_matrix)
+(Essay_dtm_matrix[c(1:3),c(2:4)])
+
+## Also convert to DF
+Essay_DF <- as.data.frame(as.matrix(Essay_dtm))
+str(Essay_DF)
+(Essay_DF$fire)
+(nrow(Essay_DF))  ## Each row is a Essay
+## Fox DF format
+
+Essay_dtm_matrix[1:11, 1:2]
+Essay_dtm_matrix[12:62, 1:2]
+Essay_dtm_matrix[63:65, 1:2]
+Essay_dtm_matrix[66:70, 1:2]
+Essay_dtm_matrix[71:85, 1:2]
+#1-11 dispt essay
+#12-62 Hamilton Essay
+#63-65 HM
+#66-70 Jay
+#71-85 Madison
+
+# Dispute Essays Word Cloud
+for (i in 1:11) {
+wordcloud(colnames(Essay_dtm_matrix), Essay_dtm_matrix[i, ], max.words = 70)
+}
+wordcloud(colnames(Essay_dtm_matrix), colSums(Essay_dtm_matrix[1:11,]), max.words = 70,colors=brewer.pal(8, "Dark2"))
+# Hamilton Essays Word Cloud
+for (i in 12:62) {
+wordcloud(colnames(Essay_dtm_matrix), Essay_dtm_matrix[i, ], max.words = 70)}
+wordcloud(colnames(Essay_dtm_matrix), colSums(Essay_dtm_matrix[12:62, ]), max.words = 70,colors=brewer.pal(8, "Dark2"))
+# HM Essays Word Cloud
+for (i in 63:65) {
+wordcloud(colnames(Essay_dtm_matrix), Essay_dtm_matrix[i, ], max.words = 70)
+}
+wordcloud(colnames(Essay_dtm_matrix), colSums(Essay_dtm_matrix[63:65, ]), max.words = 70,colors=brewer.pal(8, "Dark2"))
+# Jay Essays Word Cloud
+for (i in 66:70) {
+wordcloud(colnames(Essay_dtm_matrix), Essay_dtm_matrix[i, ], max.words = 70)
+}
+wordcloud(colnames(Essay_dtm_matrix), colSums(Essay_dtm_matrix[66:70, ]), max.words = 70,colors=brewer.pal(8, "Dark2"))
+# Madison Essays Word Cloud
+for (i in 71:85) {
+wordcloud(colnames(Essay_dtm_matrix), Essay_dtm_matrix[i, ], max.words = 70)
+}
+wordcloud(colnames(Essay_dtm_matrix), colSums(Essay_dtm_matrix[71:85, ]), max.words = 70,colors=brewer.pal(8, "Dark2"))
+
+
+(head(sort(as.matrix(Essay_dtm)[1:11,], decreasing = TRUE), n=20))
+
+############## Distance Measures Training Data ######################
+
+m  <- data.frame(Essay_dtm_matrix[c(12:62,71:85),])
+m_norm <- Essay_Matrix_Norm[c(12:62,71:85),]
+# # # m <- m[1:2, 1:3]
+distMatrix_M <- dist(m, method="manhattan")
+print(distMatrix_M)
+
+distMatrix_E <- dist(m, method="euclidean")
+#install.packages("xlsx")
+#library(xlsx)
+write.xlsx(data.frame(as.matrix(distMatrix_E)), "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/distMatrix_E.xlsx")
+
+
+print(distMatrix_E)
+
+distMatrix_C <- dist(m, method="cosine")
+print(distMatrix_C)
+distMatrix_C_norm <- dist(m_norm, method="cosine")
+
+
+############## Distance Measures Test Data ######################
+
+ m.t  <- data.frame(Essay_dtm_matrix[c(12:62,71:85,1:11),])
+ m.t <- m.t[-c(which(row.names(m.t[,1:2])=="Hamilton_fed_22.txt" |row.names(m.t[,1:2])=="Hamilton_fed_36.txt" |row.names(m.t[,1:2])=="Hamilton_fed_85.txt" |row.names(m.t[,1:2])=="Hamilton_fed_59.txt" |row.names(m.t[,1:2])=="Hamilton_fed_60.txt" |row.names(m.t[,1:2])=="Hamilton_fed_80.txt" |row.names(m.t[,1:2])=="Hamilton_fed_69.txt" |row.names(m.t[,1:2])=="Hamilton_fed_81.txt" |row.names(m.t[,1:2])=="Hamilton_fed_82.txt"|row.names(m.t[,1:2])=="Hamilton_fed_83.txt"|row.names(m.t[,1:2])=="Hamilton_fed_84.txt"|row.names(m.t[,1:2])=="Madison_fed_14.txt"|row.names(m.t[,1:2])=="Madison_fed_37.txt"|row.names(m.t[,1:2])=="Madison_fed_48.txt"|row.names(m.t[,1:2])=="Madison_fed_58.txt")),]
+m_norm.t <- Essay_Matrix_Norm[c(12:62,71:85,1:11),]
+
+ m.t.h  <- data.frame(Essay_dtm_matrix[c(12:62,1:11),])
+ m.t.h <- m.t.h[-c(which(row.names(m.t.h[,1:2])=="Hamilton_fed_80.txt" |row.names(m.t.h[,1:2])=="Hamilton_fed_69.txt" |row.names(m.t.h[,1:2])=="Hamilton_fed_81.txt" |row.names(m.t.h[,1:2])=="Hamilton_fed_82.txt"|row.names(m.t.h[,1:2])=="Hamilton_fed_83.txt"|row.names(m.t.h[,1:2])=="Hamilton_fed_84.txt")),]
+m.t.h[,1:2]
+
+m.t.m  <- data.frame(Essay_dtm_matrix[c(71:85,1:11),])
+ m.t.m <- m.t.m[-c(which(row.names(m.t.m[,1:2])=="Madison_fed_14.txt"|row.names(m.t.m[,1:2])=="Madison_fed_37.txt"|row.names(m.t.m[,1:2])=="Madison_fed_48.txt"|row.names(m.t.m[,1:2])=="Madison_fed_58.txt")),]
+m.t.m[,1:2]
+
+
+
+############# Clustering Training Data #############################
+## Hierarchical
+
+## Manhattan
+groups_M <- hclust(distMatrix_M,method="ward.D")
+plot(groups_M, cex=0.9, hang=-1)
+rect.hclust(groups_M, k=6)
+
+## Euclidean
+groups_E <- hclust(distMatrix_E,method="ward.D")
+plot(groups_E, cex=0.9, hang=-1)
+rect.hclust(groups_E, k=6)
+
+## Cluster members
+groups_E.m <- cutree(groups_E, k=6)
+
+
+#cluster means
+cluster.means <-aggregate(m,list(groups_E.m),mean)
+
+length(cluster.means[1,])
+length(m.t[67,])
+
+cluster.means[,4900:4901]
+m.t[,4899:4900]
+
+cluster.means[,1:3]
+cbind(file_nm=row.names(m.t),data.frame(m.t[,1:3]))
+# add dispute data
+cluster.means.with_disp <- rbind(cluster.means,cbind(Group.1=row.names(m.t[67:length(m.t[,1]),]),data.frame(m.t[67:length(m.t[,1]),])/66))
+row.names(cluster.means.with_disp)<-NULL
+
+# calculate distance of existing cluster with dispute data
+
+ distMatrix_E.t <- dist(cluster.means.with_disp[,-1], method="euclidean")
+ print(distMatrix_E.t)
+
+groups_E.t <- hclust(distMatrix_E.t,method="ward.D")
+plot(groups_E.t, cex=0.9, hang=-1)
+rect.hclust(groups_E.t, k=16)
+
+# calculate distance including test data
+
+distMatrix_E.t <- dist(m.t, method="euclidean")
+write.xlsx(data.frame(as.matrix(distMatrix_E.t)), "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/distMatrix_E.xlsx")
+
+distMatrix_E.t.h <- dist(m.t.h, method="euclidean")
+write.xlsx(data.frame(as.matrix(distMatrix_E.t.h)), "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/distMatrix_E.xlsx")
+ 
+distMatrix_E.t.m <- dist(m.t.m, method="euclidean")
+write.xlsx(data.frame(as.matrix(distMatrix_E.t.m)), "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/distMatrix_E.xlsx")
+ 
+ 
+ 
+groups_E.t <- hclust(distMatrix_E.t,method="ward.D")
+plot(groups_E.t, cex=0.9, hang=-1)
+rect.hclust(groups_E.t, k=4)
+
+groups_E.t.h <- hclust(distMatrix_E.t.h,method="ward.D")
+plot(groups_E.t.h, cex=0.9, hang=-1)
+rect.hclust(groups_E.t.h, k=3)
+
+groups_E.t.m <- hclust(distMatrix_E.t.m,method="ward.D")
+plot(groups_E.t.m, cex=0.9, hang=-1)
+rect.hclust(groups_E.t.m, k=3)
+
+
+# Silhouette Plot
+plot(silhouette(cutree(groups_E, k=6),distMatrix_E))
+
+plot(silhouette(cutree(groups_E.t, k=4),distMatrix_E.t))
+plot(silhouette(cutree(groups_E.t.h, k=3),distMatrix_E.t.h))
+plot(silhouette(cutree(groups_E.t.m, k=3),distMatrix_E.t.m))
+
+#scree plot
+wss <-(nrow(m)-1)*sum(apply(m,2, var))
+for(i in 2:10) wss[i] <- sum(kmeans(m,centers = i)$withinss)
+plot(1:10,wss,type="b",xlab = "Number of Clusters",ylab = "within group SS")
+
+wss <-(nrow(m.t.h)-1)*sum(apply(m.t.h,2, var))
+for(i in 2:10) wss[i] <- sum(kmeans(m.t.h,centers = i)$withinss)
+plot(1:10,wss,type="b",xlab = "Number of Clusters",ylab = "within group SS")
+
+wss <-(nrow(m.t.m)-1)*sum(apply(m.t.m,2, var))
+for(i in 2:10) wss[i] <- sum(kmeans(m.t.m,centers = i)$withinss)
+plot(1:10,wss,type="b",xlab = "Number of Clusters",ylab = "within group SS")
+
+wss <-(nrow(m.t)-1)*sum(apply(m.t,2, var))
+for(i in 2:10) wss[i] <- sum(kmeans(m.t,centers = i)$withinss)
+plot(1:10,wss,type="b",xlab = "Number of Clusters",ylab = "within group SS")
+#k - means  clustering
+
+groups_K <-kmeans(m,4)
+mk <- cbind(m,file_nm=row.names(m))
+ggplot()+ geom_point( aes(x=groups_K$cluster,y=mk$file_nm),col=groups_K$cluster)
+
+groups_K <-kmeans(m.t.h,4)
+mkth <- cbind(m.t.h,file_nm=row.names(m.t.h))
+ggplot()+ geom_point( aes(x=groups_K$cluster,y=mkth$file_nm),col=groups_K$cluster)
+
+groups_K <-kmeans(m.t.m,4)
+mktm <- cbind(m.t.m,file_nm=row.names(m.t.m))
+ggplot()+ geom_point( aes(x=groups_K$cluster,y=mktm$file_nm),col=groups_K$cluster)
+
+groups_KT <-kmeans(m.t,4)
+mkt <- cbind(m.t,file_nm=row.names(m.t))
+mkt[,1:2]
+ggplot()+ geom_point( aes(x=groups_KT$cluster,y=mkt$file_nm),col=groups_KT$cluster)
+
+## Euclidean
+groups_E_C <- hclust(distMatrix_E,method="complete")
+plot(groups_E_C, cex=0.9, hang=-1)
+rect.hclust(groups_E_C, k=6)
+
+
+
+## Euclidean
+groups_E_S <- hclust(distMatrix_E,method="single")
+plot(groups_E_S, cex=0.9, hang=-1)
+rect.hclust(groups_E_S, k=6)
+
+## Cosine Similarity
+groups_C <- hclust(distMatrix_C,method="ward.D")
+plot(groups_C, cex=0.9, hang=-1)
+rect.hclust(groups_C, k=6)
+
+## Cosine Similarity for Normalized Matrix
+groups_C_n <- hclust(distMatrix_C_norm,method="ward.D")
+plot(groups_C_n, cex=0.9, hang=-1)
+rect.hclust(groups_C_n, k=6)
+
+
+############# Clustering Test Data#############################
+## Hierarchical
+
+## Manhattan
+groups_M.t <- hclust(distMatrix_M.t,method="ward.D")
+plot(groups_M.t, cex=0.9, hang=-1)
+rect.hclust(groups_M.t, k=6)
+
+## Euclidean
+groups_E.t <- hclust(distMatrix_E.t,method="ward.D")
+plot(groups_E.t, cex=0.9, hang=-1)
+rect.hclust(groups_E.t, k=6)
+
+## Euclidean
+groups_E_C.t <- hclust(distMatrix_E.t,method="complete")
+plot(groups_E_C.t, cex=0.9, hang=-1)
+rect.hclust(groups_E_C.t, k=6)
+
+## Euclidean
+groups_E_S.t <- hclust(distMatrix_E.t,method="single")
+plot(groups_E_S.t, cex=0.9, hang=-1)
+rect.hclust(groups_E_S.t, k=6)
+
+## Cosine Similarity
+groups_C.t <- hclust(distMatrix_C.t,method="ward.D")
+plot(groups_C.t, cex=0.9, hang=-1)
+rect.hclust(groups_C.t, k=6)
+
+## Cosine Similarity for Normalized Matrix
+groups_C_n.t <- hclust(distMatrix_C_norm.t,method="ward.D")
+plot(groups_C_n.t, cex=0.9, hang=-1)
+rect.hclust(groups_C_n.t, k=6)
+
+### NOTES: Cosine Sim works the best. Norm and not norm is about
+## the same because the size of the novels are not sig diff.
+
+####################   k means clustering -----------------------------
+X <- m_norm
+## Remember that kmeans uses a matrix of ONLY NUMBERS
+## We have this so we are OK.
+## Manhattan gives the best vis results!
+distance1 <- get_dist(X,method = "manhattan")
+fviz_dist(distance1, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+distance2 <- get_dist(X,method = "pearson")
+fviz_dist(distance2, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+distance3 <- get_dist(X,method = "canberra")
+fviz_dist(distance3, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+distance4 <- get_dist(X,method = "spearman")
+fviz_dist(distance4, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+distance5 <- get_dist(X,method = "euclidean")
+fviz_dist(distance5, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+
+# Elbow method
+fviz_nbclust(m, kmeans, method = "wss") +
+  geom_vline(xintercept = 4, linetype = 2)+
+  labs(subtitle = "Elbow method")
+# Silhouette method
+fviz_nbclust(m, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")
+## Next, our current matrix does NOT have the columns as the docs
+## so we need to transpose it first....
+## Run the following twice...
+X <- t(X)
+## Now scale the data
+X <- scale(X)
+str(X)
+
+## k means
+kmeansFIT_1 <- kmeans(X,centers=3)
+#(kmeansFIT1)
+summary(kmeansFIT_1)
+#(kmeansFIT_1$cluster)
+fviz_cluster(kmeansFIT_1, data = X)
+## --------------------------------------------
+
+################# Expectation Maximization ---------
+## When Clustering, there are many options. 
+## I cannot run this as it requires more than 18 Gigs...
+
+#ClusFI <- Mclust(X,G=6)
+#(ClusFI)
+#summary(ClusFI)
+#plot(ClusFI, what = "classification")
+
+Essay_tdm <- TermDocumentMatrix(EssayCorpus,
+                         control = list(
+                           stopwords = TRUE, 
+                           wordLengths=c(3, 15),
+                           removePunctuation = T,
+                           removeNumbers = T,
+                           tolower=T,
+                           stemming = T,
+                           remove_separators = T,
+                           stopwords = MyStopwords,
+                           #removeWords(STOPS),
+                           #removeWords(MyStopwords),
+                           bounds = list(global = c(minTermFreq, maxTermFreq))
+                         ))
+TDM_mat <- as.matrix(Essay_tdm)
+Essay_TDM_N1 <- apply(TDM_mat, 1, function(i) round(i/sum(i),3))
+## transpose
+Essay_Matrix_Norm_TDM <- t(Essay_TDM_N1)
+Essay_tdm_matrix = as.matrix(Essay_tdm)
+str(Essay_tdm_matrix)
+(Essay_tdm_matrix[c(1:3),c(2:4)])
+
+tdm  <- Essay_tdm_matrix[,c(12:62,71:85)]
+tdm_norm <- Essay_Matrix_Norm_TDM[1:2,c(12:62,71:85)]
+
+Y <- tdm_norm
+## Run the following twice...
+Y <- t(Y)
+## Now scale the data
+Y <- scale(Y)
+str(Y)
+
+## k means
+kmeansFIT_2 <- kmeans(Y,centers=3)
+#(kmeansFIT1)
+summary(kmeansFIT_2)
+#(kmeansFIT_1$cluster)
+fviz_cluster(kmeansFIT_2, data = Y)
+
+########### Frequencies and Associations ###################
+
+## FInd frequenct words...
+(findFreqTerms(Essay_dtm, 2500))
+## Find assocations with aselected conf
+(findAssocs(Essay_dtm, 'fire', 0.95))
+
+##############  NOTE ############################
+## The following is an alternative method
+## This code can take a long time to run.
+## It is commented out for now.
+#################################################
+
+##Next, there are several steps needed to prepare the texts
+## You will need to remove punctuation, make everything lowercase
+## normalize, remove common and useless words like "and", "the", "or"
+## Uselses words are called "Stopwords"
+## Don't forget to remove numbers as well. 
+
+## The function : getTransformations() will show all the functions
+## that process the data - such as removeNumbers, removePunctuation, etc
+## run getTransformations() to see this.
+## Also note that tolower() will change all case to lowercase.
+
+## The tm_map function allows you to perform the same 
+## transformations on all of your texts at once
+
+
+# Text Transformation
+
+#words.corpus <- Corpus(DirSource("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt"))
+
+##Make everything lowercase
+#words.corpus <- tm_map(words.corpus, NLP::meta(words.corpus[[1]],5))
+#words.corpus <- tm_map(words.corpus, content_transformer(tolower))
+#words.corpus <- tm_map(words.corpus, content_transformer(removePunctuation))
+#words.corpus <- tm_map(words.corpus, removeNumbers)
+## Remove all Stop Words
+#words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+## You can also remove words that you do not want
+#(MyStopwords <- c("will", "shall", "may", "might", "can", "must","much","upon","shall",list.files("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/", pattern="", all.files=FALSE,full.names=FALSE)
+#))
+  #stopwords))
+#words.corpus <- tm_map(words.corpus, removeWords, MyStopwords)
+## Note: There are several other functions that also clean/prep text data
+## stripWhitespace and
+# words.corpus <- tm_map(words.corpus, content_transformer(removeURL)) 
+#(meta(words.corpus[[74]],5))  ## Now the metadata is gone - the id is lost
+
+
+
+## NOTE: If you have many words that you do not want to include
+## you can create a file/list
+## MyList <- unlist(read.table("PATH TO YOUR STOPWORD FILE", stringsAsFactors=FALSE)
+## MyStopWords <- c(MyList)
+
+
+
+## Next, we can apply lemmitization
+## In other words, we can combine variations on words such as
+## sing, sings, singing, singer, etc.
+## I will not do this - but it is an option
+#words.corpus <- tm_map(words.corpus, stemDocument)
+#tm::inspect(words.corpus)
+
+## Let's see where we are so far...
+## This will be large - so I am commenting it out.
+## It is a good idea to inspect it once. 
+## WHen you do- you will see many \n that you may
+## have to deal with...
+#tm::inspect(words.corpus)
+
+## You can use this view/information to add Stopwords and then re-run.
+## In other words, I see from inspection that the word "can" is all over
+## the place. But it does not mean anything. So I added it to my MyStopWords
+
+## Next, I will write all cleaned docs  - the entire cleaned and prepped corpus
+## to a file - in case I want to use it for something else.
+
+## This will be commented out unless it is needed....
+#(words.corpus.df <- data.frame(text=sapply(words.corpus, identity), 
+                         #stringsAsFactors=F))
+#write.csv(Novelsdataframe, "EssayCorpusoutput.csv")
+
+
+
+###################################################################
+######################### NEXT STEPS ##############################
+###################################################################
+
+## After you complete the above, you do not need to run those lines
+## again, as they take a long time.
+
+## The next steps are to tokenize the documents and vectorize
+## each into record data such that the words are the variables
+## (column names)
+
+## Make the Term Document Matrix
+## TMD stands for Term Document Matrix
+#(words.corpus_TDM <- TermDocumentMatrix(words.corpus))
+#tm::inspect(words.corpus_TDM)
+## In the DTM - doc term matrix, the words are the vars
+#(words.corpus_DocTM <- DocumentTermMatrix(words.corpus))
+#tm::inspect(words.corpus_DocTM)
+## FInd frequenct words...
+#(findFreqTerms(words.corpus_DocTM, 1000))
+## Find assocations with aselected conf
+#(findAssocs(words.corpus_DocTM, 'world', 0.60))
+
+## VISUALIZE
+#words.corpus_DocTM_DF <- as.data.frame(tm::inspect(words.corpus_DocTM))
+#words.corpus_DFScale <- scale(words.corpus_DocTM_DF) # normalize
+#d <- dist(words.corpus_DFScale,method="euclidean")
+#d <- dist(words.corpus_DFScale,method="cosine")
+#fit <- hclust(d, method="ward.D2")
+#plot(fit)
+
+```
+
+```{r}
+###
+##
+### Document Similarity Using Measures
+##
+## Gates
+## ANother good resource:
+## https://rstudio-pubs-static.s3.amazonaws.com/66739_c4422a1761bd4ee0b0bb8821d7780e12.html
+## http://www.minerazzi.com/tutorials/cosine-similarity-tutorial.pdf
+## Book: Text Mining in R
+## https://www.tidytextmining.com/
+######## Example 1 ----------------------
+##
+## Whenever you learn something new, always create a very small
+## example that you can practice with. 
+
+## I have created a small "Corpus" (collections of documents or books)
+## They are called, Doc1, Doc2, ..., Doc5.
+## The documents are in sentence format.
+
+## The goal is to see how similar the documents are.
+
+## First, we must read in the documents and convert them to 
+## a format that we can evaluate.
+
+##If you install from the source....
+#Sys.setenv(NOAWT=TRUE)
+## ONCE: install.packages("wordcloud")
+library(wordcloud)
+## ONCE: install.packages("tm")
+library(tm)
+# ONCE: install.packages("Snowball")
+## NOTE Snowball is not yet available for R v 3.5.x
+## So I cannot use it  - yet...
+##library("Snowball")
+##set working directory
+## ONCE: install.packages("slam")
+library(slam)
+library(quanteda)
+## ONCE: install.packages("quanteda")
+## Note - this includes SnowballC
+library(SnowballC)
+library(arules)
+##ONCE: install.packages('proxy')
+library(proxy)
+
+setwd("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt")
+## Next, load in the documents (the corpus)
+words.corpus <- Corpus(DirSource("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt"))
+
+#TheCorpus <- Corpus(DirSource("Novels_Corpus"))
+##The following will show you that you read in 5 documents
+(words.corpus)
+
+##Next, there are several steps needed to prepare the texts
+## You will need to remove punctuation, make everything lowercase
+## normalize, remove common and useless words like "and", "the", "or"
+## Uselses words are called "Stop Words"
+## Don't forget to remove numbers as well. 
+
+## The function : getTransformations() will show all the functions
+## that process the data - such as removeNumbers, removePunctuation, etc
+## run getTransformations() to see this.
+## Also note that tolower() will change all case to lowercase.
+
+## The tm_map function allows you to perform the same 
+## transformations on all of your texts at once
+CleanCorpus <- tm_map(words.corpus, removePunctuation)
+
+## Remove all Stop Words
+CleanCorpus <- tm_map(CleanCorpus, removeWords, stopwords("english"))
+
+## You can also remove words that you do not want
+#MyStopWords <- c("like", "very", "can", "I", "also", "lot")
+#CleanCorpus <- tm_map(CleanCorpus, removeWords, MyStopWords)
+
+## NOTE: If you have many words that you do not want to include
+## you can create a file/list
+## MyList <- unlist(read.table("PATH TO YOUR STOPWORD FILE", stringsAsFactors=FALSE)
+## MyStopWords <- c(MyList)
+
+##Make everything lowercase
+CleanCorpus <- tm_map(CleanCorpus, content_transformer(tolower))
+
+## Next, we can apply lemmitization
+## In other words, we can combine variations on words such as
+## sing, sings, singing, singer, etc.
+## NOTE: This will NOT WORK for R version 3.5.x yet - so its
+## just for FYI. This required package Snowball which does not yet
+## run under the new version of R
+#CleanCorpus <- tm_map(CleanCorpus, stemDocument)
+#inspect(CleanCorpus)
+
+
+
+## Let's see where we are so far...
+tm::inspect(CleanCorpus)
+## You can use this view/information to add Stopwords and then re-run.
+## In other words, I see from inspection that the word "can" is all over
+## the place. But it does not mean anything. So I added it to my MyStopWords
+
+## Next, I will write all cleaned docs  - the entire cleaned and prepped corpus
+## to a file - in case I want to use it for something else.
+
+(Cdataframe <- data.frame(text=sapply(CleanCorpus, identity), 
+                        stringsAsFactors=F))
+write.csv(Cdataframe, "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/Corpusoutput2.csv")
+
+CleanCorpus <- tm_map(CleanCorpus, stemDocument)
+
+
+## Note: There are several other functions that also clean/prep text data
+## stripWhitespace and
+## myCorpus <- tm_map(myCorpus, content_transformer(removeURL)) 
+
+## ------------------------------------------------------------------
+## Now, we are ready to move forward.....
+##-------------------------------------------------------------------
+
+## View corpus as a document matrix
+## TMD stands for Term Document Matrix
+(MyTDM <- TermDocumentMatrix(CleanCorpus))
+tm::inspect(MyTDM)
+
+
+## By inspecting this matrix, I see that the words "also" and "lot" is there, but not useful
+## I will add these to my MyStopWords and will re-run the above code....
+##--------------NOTE
+## ABOUT DocumentTermMatrix vs. TermDocumentMatrix - yes these are NOT the same :)
+##TermDocument means that the terms are on the vertical axis and the documents are 
+## along the horizontal axis. DocumentTerm is the reverse
+
+## Before we normalize, we can look at the overall frequencies of words 
+## This will find words that occur more than 3 times in the entire corpus
+findFreqTerms(MyTDM, 2)
+## Find assocations with aselected conf
+findAssocs(MyTDM, 'philosophers', 0.20)
+
+## VISUALIZE
+CleanDF <- as.data.frame(tm::inspect(MyTDM))
+(CleanDF)
+CleanDFScale <- scale(CleanDF)
+d <- dist(CleanDFScale,method="euclidean")
+fit <- hclust(d, method="ward.D2")
+plot(fit)
+
+MyTDM.m <- as.matrix(MyTDM)
+
+term_frequency <- rowSums(MyTDM.m)
+# Sort term frequency in descending order
+term_frequency <- sort(term_frequency, decreasing = T)
+# View the top 10 most common words
+knitr::kable(term_frequency[1:20])
+
+## Less frequent words
+tail(term_frequency,10)
+
+# normalizing DTM 
+(MyDTM <- DocumentTermMatrix(CleanCorpus))
+DTM.norm <- DocumentTermMatrix(CleanCorpus, control = list(weighting = weightTfIdf, stopwords = TRUE))
+tm::inspect(DTM.norm)
+######################## Visualize ########################
+## Given document discrepancies in length and spurious associations, the data must be normalized.. 
+## Hierarchical clustering produces a set of nested clusters organized as a hierarchical tree visualized as a: 
+## Dendrogram: The terms higher in the plot appear more frequently within the corpus
+## Terms grouped near to each other are more frequently found together
+
+# In this view the words are grouped
+CleanDTM <- as.data.frame(tm::inspect(DTM.norm))
+CleanDTMScale <- scale(CleanDTM)
+d <- dist(CleanDTMScale,method="euclidean")
+fit <- hclust(d, method="ward.D2")
+plot(fit)
+
+MyDTM.m <- as.matrix(DTM.norm)
+MyDTM.mScale <- scale(MyDTM.m)
+term_frequency <- rowSums(MyDTM.m)
+# Sort term frequency in descending order
+term_frequency <- sort(term_frequency, decreasing = T)
+
+knitr::kable(term_frequency[1:74])
+
+d <- dist(term_frequency,method="euclidean")
+fit <- hclust(d, method="ward.D2")
+plot(fit)
+
+
+d <- dist(term_frequency,method="manhattan")
+fit <- hclust(d, method="ward.D2")
+plot(fit)
+
+
+d <- dist(MyDTM.mScale,method="euclidean")
+fit <- hclust(d, method="ward.D2")
+plot(fit)
+
+
+d <- dist(MyDTM.mScale,method="manhattan")
+fit <- hclust(d, method="ward.D2")
+plot(fit)
+
+## Less frequent words
+tail(term_frequency,10)
+## NOw I have agood matrix that allows me to see all the key words of interest 
+## and their frequency in each document
+## HOWEVER - I still need to normalize!
+## Even though this example is very small and all docs in this example are about the
+## same size, this will not always be the case. If a document has 10,000 words, it
+## will easily have a greater frequency of words than a doc with 1000 words.
+
+#(MyDTM <- DocumentTermMatrix(CleanCorpus))
+#inspect(MyDTM)
+
+## NOrmalize the Term Doc Matrix from above and then visualize it again
+## Warning!! It is easy to mix up the DTM and the TDM- be carefull
+
+#NormalizedTDM <- TermDocumentMatrix(CleanCorpus, control = list(weighting = weightTfIdf, stopwords = TRUE))
+#inspect(NormalizedTDM)
+
+## Visualize normalized DTM
+## The dendrogram:
+## Terms higher in the plot appear more frequently within the corpus
+## Terms grouped near to each other are more frequently found together
+CleanDF_N <- as.data.frame(inspect(NormalizedTDM))
+CleanDFScale_N <- scale(CleanDF_N )
+d <- dist(CleanDFScale_N,method="euclidean")
+fit <- hclust(d, method="ward.D2")
+rect.hclust(fit, k = 4) # cut tree into 4 clusters 
+plot(fit)
+
+## Wordcloud
+inspect(MyTDM)
+
+m <- as.matrix(MyTDM)   ## You can use this or the next for m
+(m)
+#m <- as.matrix(CleanDF_N)
+# calculate the frequency of words and sort it by frequency
+word.freq <- sort(rowSums(m), decreasing = T)
+wordcloud(words = names(word.freq), freq = word.freq*2, min.freq = 2,
+          random.order = F)
+
+## Use kmeans to cluster the documents
+
+ClusterM <- t(m) # transpose the matrix to cluster documents 
+(ClusterM)
+#set.seed(100) # set a fixed random seed
+k <- 3 # number of clusters
+kmeansResult <- kmeans(ClusterM, k)
+#round(kmeansResult$centers, digits = 3) # cluster centers
+
+## See the clusters  - this shows the similar documents
+## This does not always work well and can also depend on the
+## starting centroids
+(kmeansResult$cluster)
+plot(kmeansResult$cluster)
+
+library("factoextra")
+fviz_cluster(kmeansResult, data = ClusterM,
+             ellipse.type = "convex",
+             palette = "jco",
+             ggtheme = theme_minimal())
+#, color=TRUE, shade=TRUE,
+         #labels=2, lines=0)
+
+## Let's try to find similarity using cosine similarity
+## Let's look at our matrix
+
+m2<-DTM.norm
+tm::inspect(DTM.norm)
+str(m2)
+cosine_dist_mat <- 
+  1 - crossprod_simple_triplet_matrix(m2)/
+  (sqrt(col_sums(m2^2) %*% t(col_sums(m2^2))))
+
+(cosine_dist_mat)
+
+## What these results mean:
+## (1) Notice that the cosine sim between Doc 1 and Doc 1 is 0. 
+## This is because there is no distance between them. 
+## The Cosine similarity between Doc 1 and Doc 4 is 1, this means they are
+## maximally far apart.
+## Some people will use 1 - cosine sim to get the nearness - in that case - 1 is nearest.
+
+(cos_sim_matrix <-(1 - cosine_dist_mat))
+## Now, larger means closer or more similar
+## Docs 1 and 2 are similar
+## Docs 3 and 4 are similar
+## If we force 2 clusters, Doc 5 is most similar to Doc 3.
+
+## Notice that this works MUCH BETTER than k means!
+
+## This is a small example of cosine similarity so you can see how it works
+## I will comment it out...
+######  m3 <- matrix(1:9, nrow = 3, ncol = 3)
+######   (m3)
+######   ((crossprod(m3))/(  sqrt(col_sums(m3^2) %*% t(col_sums(m3^2))   )))
+ 
+#heatmap https://www.rdocumentation.org/packages/stats/versions/3.5.0/topics/heatmap
+heatmap(cos_sim_matrix) 
+
+
+
+
+```
+
+
+## Extract Files
+```{r}
+zip.file="C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/fedPapers.zip"
+
+unzip(zip.file, files = NULL, list = FALSE, overwrite = TRUE,junkpaths = FALSE, exdir = "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp", unzip = "internal",setTimes = FALSE)
+
+
+
+```
+
+
+## Load Positive/Negative Keywords and sentiments
+```{r Load Positive/Negative Keywords}
+
+pos <- "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 687/opinion-lexicon-English/positive-words.txt"
+neg <- "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 687/opinion-lexicon-English/negative-words.txt" 
+
+# read the files
+p <- scan(pos,character(0),sep = "\n") 
+n <- scan(neg,character(0),sep = "\n")
+
+#remove the 1st 34 lines (Header Info)
+
+p <- p[-1:-34]
+n <- n[-1:-34]
+
+head(p,10)
+head(n,10)
+
+sentiments
+affin <- get_sentiments("afinn")
+get_sentiments("bing")
+get_sentiments("nrc")
+
+```
+
+```{r Function to compute sentiment Score}
+
+
+fnGetSentimentScore <- function(words,i){
+  
+matched <-match(words,affin$word,nomatch=0)
+#print(paste("Matched :" ,matched))
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+
+
+pScore.m[i] <<- sum(ifelse(mScore >0, mScore, 0))
+nScore.m[i] <<- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore.m[i] <<- sum(abs(mScore))
+
+print(paste(i," - Essay" ))
+print(paste("_________________________________" ))
+# Overall Score 
+print(paste("Total Score :" ,totalScore.m[i]))
+print(paste("Positive Score :" ,pScore.m[i]))
+print(paste("Negative Score :", nScore.m[i]))
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore.m[i] <<-pScore.m[i]/totalScore.m[i]
+ratioNegScore.m[i] <<-nScore.m[i]/totalScore.m[i]
+
+
+print(paste("Positive Score ratio :" ,ratioPosScore.m[i]))
+print(paste("Negative Score ratio :" ,ratioNegScore.m[i]))
+
+print(paste("_________________________________" ))
+
+}
+
+
+fnGetSentimentScore2 <- function(words,i){
+  
+matched <-match(words,affin$word,nomatch=0)
+#print(paste("Matched :" ,matched))
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+print(paste(i," - 25% of the speech" ))
+# Overall Score 
+totalScore
+print(paste("Total Score :" ,totalScore))
+pScore
+print(paste("Positive Score :" ,pScore))
+nScore
+print(paste("Negative Score :", nScore))
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+print(paste("Positive Score ratio :" ,ratioPosScore))
+ratioNegScore
+print(paste("Negative Score ratio :" ,ratioNegScore))
+
+
+
+}
+
+```
+
+## Load Hamilton Essays
+```{r Load Hamilton Essays}
+
+pScore.m <- 0
+nScore.m <- 0
+totalScore.m <- 0
+ratioPosScore.m <- 0
+ratioNegScore.m <- 0
+file_nm <-""
+Hamilton.files <- list.files("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/", pattern="Hamilton", all.files=FALSE,full.names=FALSE)
+
+ for(i in 1:length(Hamilton.files)){
+  
+sbaFile <- paste("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/",Hamilton.files[i],sep = "")
+
+sba <- readLines(sbaFile)
+str(sba)
+
+# Text Transformation
+words.vec <-VectorSource(sba)
+words.corpus <-Corpus(words.vec)
+words.corpus
+#inspect(words.corpus)
+
+words.corpus <- tm_map(words.corpus,content_transformer(tolower))
+words.corpus <- tm_map(words.corpus,removePunctuation)
+words.corpus <- tm_map(words.corpus,removeNumbers)
+words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+
+## Create Term Document Matrix
+
+tdm <-TermDocumentMatrix(words.corpus)
+(tdm)
+m <-as.matrix(tdm)
+wordCounts <- rowSums(m)
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+head(wordCounts)
+cloudFrame <-data.frame(word=names(wordCounts),freq=wordCounts)
+#wordcloud(cloudFrame$word,cloudFrame$freq)
+
+## Plot Word Cloud
+wordcloud(names(wordCounts),wordCounts,min.freq = 2,max.words = 50,rot.per = 0.35,colors = brewer.pal(8,"Dark2"))
+
+## Sentiment Analysis
+
+
+#calculate the total number of words
+totalwords <- sum(wordCounts)
+
+#have a vector that just has all the words
+words <-names(wordCounts)
+matched <- match(words,p,nomatch=0)
+
+## For Testing positive words
+
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(p[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+  
+# Store Positive Counts
+mCounts <-wordCounts[which(matched !=0)]
+length(mCounts)
+
+mWords <- names(mCounts)
+nPos <- sum(mCounts)
+nPos
+
+
+matched <- match(words,n,nomatch=0)
+
+## For Testing negative words
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(n[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+
+# Store Negative Counts
+nCounts <-wordCounts[which(matched !=0)]
+length(nCounts)
+
+nWords <- names(nCounts)
+nNeg <- sum(nCounts)
+nNeg
+
+## Calculate the Sentiment
+
+# calculate the % of words that are positive and negative
+totalWords <-length(words)
+
+ratioPos <-nPos/totalWords
+ratioPos
+
+ratioNeg <-nNeg/totalWords
+ratioNeg
+
+
+# compute the overall score using AFFIN word list
+
+matched <-match(words,affin$word,nomatch=0)
+
+## For Testing affinity match
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(affin$word[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))], ", Score: ",affin$score[as.numeric(as.character(matched.df[1,2]))])
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+# Overall Score 
+totalScore
+pScore
+nScore
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+ratioNegScore
+
+fnGetSentimentScore(words,i)
+file_nm[i] <-Hamilton.files[i]
+}
+
+## r Plot Sentiment Score
+
+Hamilton.essay.sentiment.score <- data.frame(cbind(c(1:length(Hamilton.files)),file_nm,totalScore.m,pScore.m,nScore.m,ratioPosScore.m,ratioNegScore.m))
+Hamilton.essay.sentiment.score <-`colnames<-`(Hamilton.essay.sentiment.score,c("Essay","File_nm","Total_Score","Positive_Score","Negative_Score","Positive_Ratio","Negative_Ratio"))
+
+ggplot() + geom_bar(data = Hamilton.essay.sentiment.score,aes(x=Essay,y=Total_Score),stat="identity")+labs (x="Essay Number",y="Total Sentiment Score",title = "Total Sentiment Score by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Hamilton.essay.sentiment.score,aes(x=Essay,y=Positive_Score),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Score",title = "Positive Sentiment Score by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Hamilton.essay.sentiment.score,aes(x=Essay,y=Negative_Score),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Score",title = "Negative Sentiment Score by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Hamilton.essay.sentiment.score,aes(x=Essay,y=Positive_Ratio),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Ratio",title = "Positive Sentiment Ratio by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Hamilton.essay.sentiment.score,aes(x=Essay,y=Negative_Ratio),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Ratio",title = "Negative Sentiment Ratio by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_point(data = Hamilton.essay.sentiment.score,aes(x=Positive_Ratio,y=Negative_Ratio,size=Total_Score)) +labs (x="Positive Sentiment Ratio",y="Negative Sentiment Ratio",title = "Positive Vs Negative Sentiment Ratio for Hamilton Essays") + theme(legend.position = "bottom") 
+
+```
+
+
+
+
+## Load Madison Essays
+```{r Load Madison Essays}
+
+
+Madison.files <- list.files("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/", pattern="Madison", all.files=FALSE,full.names=FALSE)
+
+ for(i in 1:length(Madison.files)){
+  
+sbaFile <- paste("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/",Madison.files[i],sep = "")
+
+sba <- readLines(sbaFile)
+str(sba)
+
+# Text Transformation
+words.vec <-VectorSource(sba)
+words.corpus <-Corpus(words.vec)
+words.corpus
+
+words.corpus <- tm_map(words.corpus,content_transformer(tolower))
+words.corpus <- tm_map(words.corpus,removePunctuation)
+words.corpus <- tm_map(words.corpus,removeNumbers)
+words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+
+## Create Term Document Matrix
+
+tdm <-TermDocumentMatrix(words.corpus)
+(tdm)
+m <-as.matrix(tdm)
+wordCounts <- rowSums(m)
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+head(wordCounts)
+cloudFrame <-data.frame(word=names(wordCounts),freq=wordCounts)
+#wordcloud(cloudFrame$word,cloudFrame$freq)
+
+## Plot Word Cloud
+wordcloud(names(wordCounts),wordCounts,min.freq = 2,max.words = 50,rot.per = 0.35,colors = brewer.pal(8,"Dark2"))
+
+## Sentiment Analysis
+
+
+#calculate the total number of words
+totalwords <- sum(wordCounts)
+
+#have a vector that just has all the words
+words <-names(wordCounts)
+matched <- match(words,p,nomatch=0)
+
+## For Testing positive words
+
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(p[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+  
+# Store Positive Counts
+mCounts <-wordCounts[which(matched !=0)]
+length(mCounts)
+
+mWords <- names(mCounts)
+nPos <- sum(mCounts)
+nPos
+
+
+matched <- match(words,n,nomatch=0)
+
+## For Testing negative words
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(n[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+
+# Store Negative Counts
+nCounts <-wordCounts[which(matched !=0)]
+length(nCounts)
+
+nWords <- names(nCounts)
+nNeg <- sum(nCounts)
+nNeg
+
+## Calculate the Sentiment
+
+# calculate the % of words that are positive and negative
+totalWords <-length(words)
+
+ratioPos <-nPos/totalWords
+ratioPos
+
+ratioNeg <-nNeg/totalWords
+ratioNeg
+
+
+# compute the overall score using AFFIN word list
+
+matched <-match(words,affin$word,nomatch=0)
+
+## For Testing affinity match
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(affin$word[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))], ", Score: ",affin$score[as.numeric(as.character(matched.df[1,2]))])
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+# Overall Score 
+totalScore
+pScore
+nScore
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+ratioNegScore
+
+fnGetSentimentScore(words,i)
+file_nm[i] <-Madison.files[i]
+}
+
+## r Plot Sentiment Score
+
+Madison.essay.sentiment.score <- data.frame(cbind(c(1:length(Madison.files)),file_nm[1:length(Madison.files)],totalScore.m[1:length(Madison.files)],pScore.m[1:length(Madison.files)],nScore.m[1:length(Madison.files)],ratioPosScore.m[1:length(Madison.files)],ratioNegScore.m[1:length(Madison.files)]))
+Madison.essay.sentiment.score <-`colnames<-`(Madison.essay.sentiment.score,c("Essay","File_nm","Total_Score","Positive_Score","Negative_Score","Positive_Ratio","Negative_Ratio"))
+
+ggplot() + geom_bar(data = Madison.essay.sentiment.score,aes(x=Essay,y=Total_Score),stat="identity")+labs (x="Essay Number",y="Total Sentiment Score",title = "Total Sentiment Score by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Madison.essay.sentiment.score,aes(x=Essay,y=Positive_Score),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Score",title = "Positive Sentiment Score by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Madison.essay.sentiment.score,aes(x=Essay,y=Negative_Score),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Score",title = "Negative Sentiment Score by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Madison.essay.sentiment.score,aes(x=Essay,y=Positive_Ratio),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Ratio",title = "Positive Sentiment Ratio by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Madison.essay.sentiment.score,aes(x=Essay,y=Negative_Ratio),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Ratio",title = "Negative Sentiment Ratio by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_point(data = Madison.essay.sentiment.score,aes(x=Positive_Ratio,y=Negative_Ratio,size=Total_Score)) +labs (x="Positive Sentiment Ratio",y="Negative Sentiment Ratio",title = "Positive Vs Negative Sentiment Ratio for Madison Essays") + theme(legend.position = "bottom") 
+
+```
+
+
+## Load Jay Essays
+```{r Load Jay Essays}
+
+
+Jay.files <- list.files("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/", pattern="Jay", all.files=FALSE,full.names=FALSE)
+
+ for(i in 1:length(Jay.files)){
+  
+sbaFile <- paste("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/",Jay.files[i],sep = "")
+
+sba <- readLines(sbaFile)
+str(sba)
+
+# Text Transformation
+words.vec <-VectorSource(sba)
+words.corpus <-Corpus(words.vec)
+words.corpus
+
+words.corpus <- tm_map(words.corpus,content_transformer(tolower))
+words.corpus <- tm_map(words.corpus,removePunctuation)
+words.corpus <- tm_map(words.corpus,removeNumbers)
+words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+
+## Create Term Document Matrix
+
+tdm <-TermDocumentMatrix(words.corpus)
+(tdm)
+m <-as.matrix(tdm)
+wordCounts <- rowSums(m)
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+head(wordCounts)
+cloudFrame <-data.frame(word=names(wordCounts),freq=wordCounts)
+#wordcloud(cloudFrame$word,cloudFrame$freq)
+
+## Plot Word Cloud
+wordcloud(names(wordCounts),wordCounts,min.freq = 2,max.words = 50,rot.per = 0.35,colors = brewer.pal(8,"Dark2"))
+
+## Sentiment Analysis
+
+
+#calculate the total number of words
+totalwords <- sum(wordCounts)
+
+#have a vector that just has all the words
+words <-names(wordCounts)
+matched <- match(words,p,nomatch=0)
+
+## For Testing positive words
+
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(p[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+  
+# Store Positive Counts
+mCounts <-wordCounts[which(matched !=0)]
+length(mCounts)
+
+mWords <- names(mCounts)
+nPos <- sum(mCounts)
+nPos
+
+
+matched <- match(words,n,nomatch=0)
+
+## For Testing negative words
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(n[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+
+# Store Negative Counts
+nCounts <-wordCounts[which(matched !=0)]
+length(nCounts)
+
+nWords <- names(nCounts)
+nNeg <- sum(nCounts)
+nNeg
+
+## Calculate the Sentiment
+
+# calculate the % of words that are positive and negative
+totalWords <-length(words)
+
+ratioPos <-nPos/totalWords
+ratioPos
+
+ratioNeg <-nNeg/totalWords
+ratioNeg
+
+
+# compute the overall score using AFFIN word list
+
+matched <-match(words,affin$word,nomatch=0)
+
+## For Testing affinity match
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(affin$word[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))], ", Score: ",affin$score[as.numeric(as.character(matched.df[1,2]))])
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+# Overall Score 
+totalScore
+pScore
+nScore
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+ratioNegScore
+
+fnGetSentimentScore(words,i)
+file_nm[i] <-Jay.files[i]
+}
+
+## r Plot Sentiment Score
+
+Jay.essay.sentiment.score <- data.frame(cbind(c(1:length(Jay.files)),file_nm[1:length(Jay.files)],totalScore.m[1:length(Jay.files)],pScore.m[1:length(Jay.files)],nScore.m[1:length(Jay.files)],ratioPosScore.m[1:length(Jay.files)],ratioNegScore.m[1:length(Jay.files)]))
+Jay.essay.sentiment.score <-`colnames<-`(Jay.essay.sentiment.score,c("Essay","File_nm","Total_Score","Positive_Score","Negative_Score","Positive_Ratio","Negative_Ratio"))
+
+ggplot() + geom_bar(data = Jay.essay.sentiment.score,aes(x=Essay,y=Total_Score),stat="identity")+labs (x="Essay Number",y="Total Sentiment Score",title = "Total Sentiment Score by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Jay.essay.sentiment.score,aes(x=Essay,y=Positive_Score),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Score",title = "Positive Sentiment Score by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Jay.essay.sentiment.score,aes(x=Essay,y=Negative_Score),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Score",title = "Negative Sentiment Score by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Jay.essay.sentiment.score,aes(x=Essay,y=Positive_Ratio),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Ratio",title = "Positive Sentiment Ratio by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = Jay.essay.sentiment.score,aes(x=Essay,y=Negative_Ratio),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Ratio",title = "Negative Sentiment Ratio by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_point(data = Jay.essay.sentiment.score,aes(x=Positive_Ratio,y=Negative_Ratio,size=Total_Score)) +labs (x="Positive Sentiment Ratio",y="Negative Sentiment Ratio",title = "Positive Vs Negative Sentiment Ratio for Jay Essays") + theme(legend.position = "bottom") 
+
+```
+
+## Load Dispute Essays
+```{r Load Dispute Essays}
+
+dispt.files <- list.files("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/", pattern="dispt", all.files=FALSE,full.names=FALSE)
+
+ for(i in 1:length(dispt.files)){
+  
+sbaFile <- paste("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/txt/",dispt.files[i],sep = "")
+
+sba <- readLines(sbaFile)
+str(sba)
+
+# Text Transformation
+words.vec <-VectorSource(sba)
+words.corpus <-Corpus(words.vec)
+words.corpus
+
+words.corpus <- tm_map(words.corpus,content_transformer(tolower))
+words.corpus <- tm_map(words.corpus,removePunctuation)
+words.corpus <- tm_map(words.corpus,removeNumbers)
+words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+
+## Create Term Document Matrix
+
+tdm <-TermDocumentMatrix(words.corpus)
+(tdm)
+m <-as.matrix(tdm)
+wordCounts <- rowSums(m)
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+head(wordCounts)
+cloudFrame <-data.frame(word=names(wordCounts),freq=wordCounts)
+#wordcloud(cloudFrame$word,cloudFrame$freq)
+
+## Plot Word Cloud
+wordcloud(names(wordCounts),wordCounts,min.freq = 2,max.words = 50,rot.per = 0.35,colors = brewer.pal(8,"Dark2"))
+
+## Sentiment Analysis
+
+
+#calculate the total number of words
+totalwords <- sum(wordCounts)
+
+#have a vector that just has all the words
+words <-names(wordCounts)
+matched <- match(words,p,nomatch=0)
+
+## For Testing positive words
+
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(p[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+  
+# Store Positive Counts
+mCounts <-wordCounts[which(matched !=0)]
+length(mCounts)
+
+mWords <- names(mCounts)
+nPos <- sum(mCounts)
+nPos
+
+
+matched <- match(words,n,nomatch=0)
+
+## For Testing negative words
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(n[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+
+# Store Negative Counts
+nCounts <-wordCounts[which(matched !=0)]
+length(nCounts)
+
+nWords <- names(nCounts)
+nNeg <- sum(nCounts)
+nNeg
+
+## Calculate the Sentiment
+
+# calculate the % of words that are positive and negative
+totalWords <-length(words)
+
+ratioPos <-nPos/totalWords
+ratioPos
+
+ratioNeg <-nNeg/totalWords
+ratioNeg
+
+
+# compute the overall score using AFFIN word list
+
+matched <-match(words,affin$word,nomatch=0)
+
+## For Testing affinity match
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(affin$word[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))], ", Score: ",affin$score[as.numeric(as.character(matched.df[1,2]))])
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+# Overall Score 
+totalScore
+pScore
+nScore
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+ratioNegScore
+
+fnGetSentimentScore(words,i)
+file_nm[i] <-dispt.files[i]
+}
+
+## r Plot Sentiment Score
+
+dispt.essay.sentiment.score <- data.frame(cbind(c(1:length(dispt.files)),file_nm[1:length(dispt.files)],totalScore.m[1:length(dispt.files)],pScore.m[1:length(dispt.files)],nScore.m[1:length(dispt.files)],ratioPosScore.m[1:length(dispt.files)],ratioNegScore.m[1:length(dispt.files)]))
+dispt.essay.sentiment.score <-`colnames<-`(dispt.essay.sentiment.score,c("Essay","File_nm","Total_Score","Positive_Score","Negative_Score","Positive_Ratio","Negative_Ratio"))
+
+ggplot() + geom_bar(data = dispt.essay.sentiment.score,aes(x=Essay,y=Total_Score),stat="identity")+labs (x="Essay Number",y="Total Sentiment Score",title = "Total Sentiment Score by  Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = dispt.essay.sentiment.score,aes(x=Essay,y=Positive_Score),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Score",title = "Positive Sentiment Score by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = dispt.essay.sentiment.score,aes(x=Essay,y=Negative_Score),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Score",title = "Negative Sentiment Score by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = dispt.essay.sentiment.score,aes(x=Essay,y=Positive_Ratio),stat="identity")+labs (x="Essay Number",y="Positive Sentiment Ratio",title = "Positive Sentiment Ratio by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = dispt.essay.sentiment.score,aes(x=Essay,y=Negative_Ratio),stat="identity")+labs (x="Essay Number",y="Negative Sentiment Ratio",title = "Negative Sentiment Ratio by Essay") + theme(legend.position = "bottom") 
+
+ggplot() + geom_point(data = dispt.essay.sentiment.score,aes(x=Positive_Ratio,y=Negative_Ratio,size=Total_Score)) +labs (x="Positive Sentiment Ratio",y="Negative Sentiment Ratio",title = "Positive Vs Negative Sentiment Ratio for dispt Essays") + theme(legend.position = "bottom") 
+
+
+```
+
+
+```{r}
+# combine all esay scores
+all.essays.score <- rbind(Hamilton.essay.sentiment.score,Madison.essay.sentiment.score,Jay.essay.sentiment.score)
+both.essay.score <- rbind(Hamilton.essay.sentiment.score,Madison.essay.sentiment.score,Jay.essay.sentiment.score,dispt.essay.sentiment.score)
+
+all.essays.score <- all.essays.score[,2:7]
+both.essay.score <- both.essay.score[,2:7]
+test.essays.score <- dispt.essay.sentiment.score[,2:7]
+
+# convert score to numeric data
+all.essays.score$Total_Score <- as.numeric(as.character(all.essays.score$Total_Score))
+all.essays.score$Positive_Score <- as.numeric(as.character(all.essays.score$Positive_Score))
+all.essays.score$Negative_Score <- as.numeric(as.character(all.essays.score$Negative_Score))
+
+test.essays.score$Total_Score <- as.numeric(as.character(test.essays.score$Total_Score))
+test.essays.score$Positive_Score <- as.numeric(as.character(test.essays.score$Positive_Score))
+test.essays.score$Negative_Score <- as.numeric(as.character(test.essays.score$Negative_Score))
+
+both.essay.score$Total_Score <- as.numeric(as.character(both.essay.score$Total_Score))
+both.essay.score$Positive_Score <- as.numeric(as.character(both.essay.score$Positive_Score))
+both.essay.score$Negative_Score <- as.numeric(as.character(both.essay.score$Negative_Score))
+
+options(digits = 4)
+all.essays.score$Positive_Ratio <- as.numeric(as.character(all.essays.score$Positive_Ratio))
+all.essays.score$Negative_Ratio <- as.numeric(as.character(all.essays.score$Negative_Ratio))
+
+test.essays.score$Positive_Ratio <- as.numeric(as.character(test.essays.score$Positive_Ratio))
+test.essays.score$Negative_Ratio <- as.numeric(as.character(test.essays.score$Negative_Ratio))
+
+both.essay.score$Positive_Ratio <- as.numeric(as.character(both.essay.score$Positive_Ratio))
+both.essay.score$Negative_Ratio <- as.numeric(as.character(both.essay.score$Negative_Ratio))
+
+
+#Scale it down to common metrics
+all.essays.score.scaled <- data.frame(scale(all.essays.score[,2:6]))
+#all.essays.score.m <- apply(all.essays.score.z,2,mean)
+#all.essays.score.s <- apply(all.essays.score.z,2,sd)
+#all.essays.score.z <- scale(all.essays.score.z,m,s)
+  
+#all.essays.score.scaled <- data.frame(scale(all.essays.score[,2:6]))
+#all.essays.score.scaled$file_nm <-all.essays.score$File_nm
+all.essays.score.d <- dist(all.essays.score[,2:6],method="manhattan")
+print(all.essays.score.d,digits=3)
+
+# Clustering dendogram with a complete linkge
+all.essays.score.hc.c <-hclust(all.essays.score.d,method = "complete")
+plot(all.essays.score.hc.c,labels = all.essays.score$File_nm)
+
+
+test.essays.score.scaled <- data.frame(scale(test.essays.score[,2:6]))
+#test.essays.score.scaled$file_nm <-test.essays.score$File_nm
+
+# create a weka file
+write.arff(all.essays.score,file = "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/essay.arff")
+write.arff(test.essays.score,file = "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/dispt_essay.arff")
+write.arff(both.essay.score,file = "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week4/temp/both_essay.arff")
+
+```
+
+
+

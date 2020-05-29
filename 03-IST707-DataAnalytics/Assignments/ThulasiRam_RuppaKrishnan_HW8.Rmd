@@ -1,0 +1,884 @@
+---
+title: "ThulasiRam_RuppaKrishnan_HW9"
+author: "Thulasiram Ruppa Krishnan"
+date: "June 15, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Libraries}
+library(tidytext)
+library(reshape2)
+library(naivebayes)
+library(tm)
+library(e1071)
+library(caret)
+library(ggplot2)
+# install.packages("FSelector")
+library(FSelector)
+library(wordcloud)    # word clouds
+library(factoextra)
+
+```
+
+
+```{r Data Load}
+
+setwd("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week9")
+getwd()
+```
+
+
+```{r Load Positive/Negative Keywords}
+
+pos <- "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 687/opinion-lexicon-English/positive-words.txt"
+neg <- "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 687/opinion-lexicon-English/negative-words.txt" 
+
+# read the files
+p <- scan(pos,character(0),sep = "\n") 
+n <- scan(neg,character(0),sep = "\n")
+
+#remove the 1st 34 lines (Header Info)
+
+p <- p[-1:-34]
+n <- n[-1:-34]
+
+head(p,10)
+head(n,10)
+
+sentiments
+affin <- get_sentiments("afinn")
+get_sentiments("bing")
+get_sentiments("nrc")
+
+```
+
+```{r Function to compute sentiment Score}
+
+
+fnGetSentimentScore <- function(words,i,j,k){
+
+  
+matched <-match(words,affin$word,nomatch=0)
+#print(paste("Matched :" ,matched))
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+
+
+pScore.m[i] <<- sum(ifelse(mScore >0, mScore, 0))
+nScore.m[i] <<- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore.m[i] <<- sum(abs(mScore))
+
+print(paste(i," - Review - lie : ",j, " sentiment : ",k ))
+print(paste("_________________________________" ))
+# Overall Score 
+print(paste("Total Score :" ,totalScore.m[i]))
+print(paste("Positive Score :" ,pScore.m[i]))
+print(paste("Negative Score :", nScore.m[i]))
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore.m[i] <<-pScore.m[i]/totalScore.m[i]
+ratioNegScore.m[i] <<-nScore.m[i]/totalScore.m[i]
+
+
+print(paste("Positive Score ratio :" ,ratioPosScore.m[i]))
+print(paste("Negative Score ratio :" ,ratioNegScore.m[i]))
+
+print(paste("_________________________________" ))
+
+
+
+}
+
+
+get_dtc <- function(pixel)
+{return(DCT2D(as.matrix(pixel),returnmat = TRUE))}
+
+
+```
+
+
+```{r Load Reviews}
+
+# Reading the data
+data<- readLines("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week9/deception_data_converted_final.csv")
+# remove header row
+data<- data[2:93]
+#remove empty reviews (in csv file show up as ?, which isn't useful)
+data<- data[-83:-84]
+
+# creating vectors to store variable names: lie, sentiment, and review
+lie<- vector(mode = "character", length = length(data))
+sentiment<- vector(mode = "character", length = length(data))
+review<- vector(mode = "character", length = length(data))
+
+# set i to iterate over lines
+i = 1;
+# create a for loop to iterate over line and extract the lie, sentiment, and review values
+for(line in data){
+  lie[i] <- substr(line[1], 1, 1)
+  sentiment[i] <- substr(line[1], 3, 3)
+  review[i] <- substr(line[1], 5, nchar(line))
+  i = i + 1
+}
+
+# combine all three vectors into a dataframe
+movie<- data.frame(lie, sentiment, review)
+
+pScore.m <- 0
+nScore.m <- 0
+totalScore.m <- 0
+ratioPosScore.m <- 0
+ratioNegScore.m <- 0
+movie.m <-""
+movie$tot <-0
+movie$pos_s <-0
+movie$neg_s <-0
+movie$pos_r <-0
+movie$neg_r <-0
+movie$words <-0
+ for(i in 1:nrow(movie)){
+  
+movie.m <<- movie[i,3]
+
+# Text Transformation
+words.vec <-VectorSource(movie.m)
+words.corpus <-Corpus(words.vec)
+words.corpus
+#inspect(words.corpus)
+
+words.corpus <- tm_map(words.corpus,content_transformer(tolower))
+words.corpus <- tm_map(words.corpus,removePunctuation)
+words.corpus <- tm_map(words.corpus,removeNumbers)
+words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+
+## Create Term Document Matrix
+
+tdm <-TermDocumentMatrix(words.corpus)
+(tdm)
+m <-as.matrix(tdm)
+wordCounts <- rowSums(m)
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+head(wordCounts)
+cloudFrame <-data.frame(word=names(wordCounts),freq=wordCounts)
+#wordcloud(cloudFrame$word,cloudFrame$freq)
+
+## Plot Word Cloud
+# wordcloud(names(wordCounts),wordCounts,min.freq = 2,max.words = 50,rot.per = 0.35,colors = brewer.pal(8,"Dark2"))
+
+## Sentiment Analysis
+
+
+#calculate the total number of words
+totalwords <- sum(wordCounts)
+
+#have a vector that just has all the words
+words <-names(wordCounts)
+matched <- match(words,p,nomatch=0)
+
+## For Testing positive words
+
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(p[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+  
+# Store Positive Counts
+mCounts <-wordCounts[which(matched !=0)]
+length(mCounts)
+
+mWords <- names(mCounts)
+nPos <- sum(mCounts)
+nPos
+
+
+matched <- match(words,n,nomatch=0)
+
+## For Testing negative words
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(n[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))])
+
+# Store Negative Counts
+nCounts <-wordCounts[which(matched !=0)]
+length(nCounts)
+
+nWords <- names(nCounts)
+nNeg <- sum(nCounts)
+nNeg
+
+## Calculate the Sentiment
+
+# calculate the % of words that are positive and negative
+totalWords <-length(words)
+
+ratioPos <-nPos/totalWords
+ratioPos
+
+ratioNeg <-nNeg/totalWords
+ratioNeg
+
+
+# compute the overall score using AFFIN word list
+
+matched <-match(words,affin$word,nomatch=0)
+
+## For Testing affinity match
+matched.df <-data.frame(matched.id=as.character(seq_len(length(matched))),matched=matched)
+matched.df <- matched.df[which(matched.df$matched!=0),]
+paste(affin$word[as.numeric(as.character(matched.df[1,2]))],"=",words[as.numeric(as.character(matched.df[1,1]))], ", Score: ",affin$score[as.numeric(as.character(matched.df[1,2]))])
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+# Overall Score 
+totalScore
+pScore
+nScore
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+ratioNegScore
+
+fnGetSentimentScore(words,i,movie[i,1],movie[i,2])
+
+movie[i,4] <-totalScore.m[i]
+movie[i,5] <-pScore.m[i]
+movie[i,6] <-nScore.m[i]
+movie[i,7] <-ratioPosScore.m[i]
+movie[i,8] <-ratioNegScore.m[i]
+movie[i,9] <-totalwords
+}
+
+## r Plot Sentiment Score
+movie$id <-rownames(movie)
+
+
+movie$id <- factor(movie$id, levels = movie$id[order(movie$lie)])
+lie.f.mean <- mean(movie[which(movie$lie=="f"),"tot"])
+lie.t.mean <- mean(movie[which(movie$lie=="t"),"tot"])
+movie$lie.tot.mean <-0
+movie[which(movie$lie=="f"),"lie.tot.mean"] <-lie.f.mean
+movie[which(movie$lie=="t"),"lie.tot.mean"] <-lie.t.mean
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=tot,color=lie),stat="identity")+labs (x="Review Number",y="Total Sentiment Score",title = "Total Sentiment Score by Reviews") + theme(legend.position = "bottom") + geom_line(data = movie,aes(x=id,y=lie.tot.mean,group=lie,color=lie)) 
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=tot/words,color=lie),stat="identity")+labs (x="Review Number",y="Total Sentiment Score",title = "Total Sentiment Score by Reviews") + theme(legend.position = "bottom")
+
+lie.f.mean <- mean(movie[which(movie$lie=="f"),"pos_s"])
+lie.t.mean <- mean(movie[which(movie$lie=="t"),"pos_s"])
+movie$lie.pos.mean <-0
+movie[which(movie$lie=="f"),"lie.pos.mean"] <-lie.f.mean
+movie[which(movie$lie=="t"),"lie.pos.mean"] <-lie.t.mean
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=pos_s,color=lie),stat="identity")+labs (x="Review Number",y="Positive Sentiment Score",title = "Positive Score by Reviews") + theme(legend.position = "bottom") + geom_line(data = movie,aes(x=id,y=lie.pos.mean,group=lie,color=lie)) 
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=pos_s/words,color=lie),stat="identity")+labs  (x="Review Number",y="Positive Sentiment Score",title = "Positive Score by Reviews") + theme(legend.position = "bottom")
+
+
+lie.f.mean <- mean(movie[which(movie$lie=="f"),"neg_s"])
+lie.t.mean <- mean(movie[which(movie$lie=="t"),"neg_s"])
+movie$lie.neg.mean <-0
+movie[which(movie$lie=="f"),"lie.neg.mean"] <-lie.f.mean
+movie[which(movie$lie=="t"),"lie.neg.mean"] <-lie.t.mean
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=neg_s,color=lie),stat="identity")+labs (x="Review Number",y="Negative Sentiment Score",title = "Negative Score by Reviews") + theme(legend.position = "bottom") + geom_line(data = movie,aes(x=id,y=lie.neg.mean,group=lie,color=lie)) 
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=neg_s/words,color=lie),stat="identity")+labs  (x="Review Number",y="Negative Sentiment Score",title = "Negative Score by Reviews") + theme(legend.position = "bottom")
+
+
+lie.f.mean <- mean(movie[which(movie$lie=="f"),"pos_r"],na.rm = TRUE)
+lie.t.mean <- mean(movie[which(movie$lie=="t"),"pos_r"],na.rm = TRUE)
+movie$lie.pos_r.mean <-0
+movie[which(movie$lie=="f"),"lie.pos_r.mean"] <-lie.f.mean
+movie[which(movie$lie=="t"),"lie.pos_r.mean"] <-lie.t.mean
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=pos_r,color=lie),stat="identity")+labs (x="Review Number",y="Positive Sentiment Ratio",title = "Positive Sentiment Ratio by Reviews") + theme(legend.position = "bottom") + geom_line(data = movie,aes(x=id,y=lie.pos_r.mean,group=lie,color=lie)) 
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=pos_r/words,color=lie),stat="identity")+labs  (x="Review Number",y="Positive Sentiment Ratio",title = "Positive Sentiment Ratio by Reviews") + theme(legend.position = "bottom")
+
+
+lie.f.mean <- mean(movie[which(movie$lie=="f"),"neg_r"],na.rm = TRUE)
+lie.t.mean <- mean(movie[which(movie$lie=="t"),"neg_r"],na.rm = TRUE)
+movie$lie.neg_r.mean <-0
+movie[which(movie$lie=="f"),"lie.neg_r.mean"] <-lie.f.mean
+movie[which(movie$lie=="t"),"lie.neg_r.mean"] <-lie.t.mean
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=neg_r,color=lie),stat="identity")+labs (x="Review Number",y="Negative Sentiment Ratio",title = "Negative Sentiment Ratio by Reviews") + theme(legend.position = "bottom") + geom_line(data = movie,aes(x=id,y=lie.neg_r.mean,group=lie,color=lie)) 
+
+ggplot() + geom_bar(data = movie[order(movie$lie),],aes(x=id,y=neg_r/words,color=lie),stat="identity")+labs  (x="Review Number",y="Negative Sentiment Ratio",title = "Negative Sentiment Ratio by Reviews") + theme(legend.position = "bottom")
+
+
+ggplot() + geom_point(data = movie,aes(x=pos_r/words,y=neg_r/words,size=tot/words, color=lie)) +labs (x="Positive Sentiment Ratio",y="Negative Sentiment Ratio",title = "Positive Vs Negative Sentiment Ratio for movie reviews") + theme(legend.position = "bottom") 
+
+```
+
+
+```{r Data Processing}
+
+####################################
+# Pre-Processing the data
+####################################
+
+
+# create a corpus
+corpus<- VCorpus(VectorSource(movie$review))
+
+# Next, there are several steps needed to prepare the reviews
+# remove punctuation, remove numbers, make everything lowercase, normalize, remove common 
+# and useless words (uselses words are called "Stop Words") 
+(getTransformations())
+# The function : getTransformations() will show all the functions that process the data
+# i.e., removeNumbers, removePunctuation, removeWords, stemDocument, stripWhitespace 
+(ndocs<-length(corpus))
+# ignore extremely rare words i.e. terms that appear in less then 10% of the documents
+(minTermFreq <- ndocs * 0.01) # returns 9
+# ignore overly common words i.e. terms that appear in more than 80% of the documents
+(maxTermFreq <- ndocs * 3) # returns 72
+review.dtm <- DocumentTermMatrix(corpus,
+                               control = list(
+                               stopwords = TRUE,
+                               wordLengths=c(3, 15),
+                               removePunctuation = T,
+                               removeNumbers = T,
+                               tolower=T,
+                               remove_separators = T,
+                               stripWhitespace = T,
+                               bounds = list(global = c(minTermFreq, maxTermFreq))
+                             ))
+
+# Creating a normalized Document Term Matrix
+inspect(review.dtm)
+review.mat <- as.matrix(review.dtm)
+review.ndtm<- apply(review.mat, 1, function(i) round(i/sum(i),3)) # normalization formula to normalize by taking
+# the word frequency in a review and dividing it by the sum of all words in that review
+review.ndtm<- t(review.ndtm) # transposing the normalized dtm
+review.word.count<- data.frame(as.matrix(review.ndtm)) # converting to a dataframe
+
+# creating lie Detection dataframe
+lie.detection<- review.word.count
+lie.detection$lie<- as.factor(lie)
+lie.detection <- cbind(lie.detection,tot=movie$tot,pos_s=movie$pos_s,neg_s=movie$neg_s,pos_r=movie$pos_r,neg_r=movie$neg_r,ws=movie$words)
+lie.detection[is.na(lie.detection)] <- 0
+head(lie.detection) # confirming variable lie was added to the dataframe
+
+
+
+# creating sentiment Detection dataframe
+sentiment.analysis<- review.word.count
+sentiment.analysis$sentiment<- as.factor(sentiment)
+sentiment.analysis <- cbind(sentiment.analysis,tot=movie$tot,pos_s=movie$pos_s,neg_s=movie$neg_s,pos_r=movie$pos_r,neg_r=movie$neg_r,ws=movie$words)
+sentiment.analysis[is.na(sentiment.analysis)] <- 0
+head(sentiment.analysis) # confirming variable sentiment was added to the dataframe
+
+```
+
+```{r Exploratory Analysis}
+####################################
+# Word Clouds and Heat Maps
+####################################
+
+wordcloud(colnames(review.mat), colSums(review.mat), max.words = 20, random.order = FALSE,
+          scale = c(3,1), colors=brewer.pal(6, "Dark2")) # most frequently used words from all reviews
+
+hm<- dist(lie.detection,method="euclidean")
+fviz_dist(hm, gradient = list(low = "red", mid = "lightblue", high = "green"))
+```
+
+
+```{r Models}
+
+####################################
+# Creating train and test datasets
+####################################
+
+# Randomly sample obs to create independent training and test data
+# From the caret library createDataPartition is used to create a series of test/training partitions
+# y = a vector of outcomes
+# p = the percentage of data that goes to training
+# list = false; the results are in a matrix with the number of rows equal to 
+# floor(p * length(y)) and times columns
+
+Partition<- createDataPartition(y = lie.detection$lie, p = 0.6, list = FALSE) # partition at 60% train
+train.lie<- lie.detection[Partition,] # Create the training sample for lie detection
+test.lie<- lie.detection[-Partition,] # Create the test sample for lie detection
+
+train.sentiment<- sentiment.analysis[Partition,] # Create the training sample for sentiment analysis
+test.sentiment<- sentiment.analysis[-Partition,] # Create the test sample for sentiment analysis
+
+# Removing either lie or sentiment from train/test datasets (for SVM)
+
+train.lie.nolabel<- train.lie[,-which( colnames(train.lie)=="lie" )] # dataframe w/o lie
+train.lie.justlabel<- train.lie$lie # vector w/ just lie
+test.lie.nolabel<- test.lie[,-which( colnames(train.lie)=="lie" )] # dataframe w/o lie
+test.lie.justlabel<- test.lie$lie # vector w/ just lie
+
+train.sentiment.nolabel<- train.sentiment[,-which( colnames(train.lie)=="lie" )] # dataframe w/o senitment
+train.sentiment.justlabel<- train.sentiment$sentiment # vector w/ just senitment
+test.sentiment.nolabel<- test.sentiment[,-which( colnames(train.lie)=="lie" )] # dataframe w/o senitment
+test.sentiment.justlabel<- test.sentiment$sentiment # vector w/ just senitment
+
+
+####################################
+# MNB Lie Detection
+####################################
+
+# Source: https://www.edureka.co/blog/naive-bayes-in-r/
+
+# Training the model using naiveBayes
+NB_e1071.l<- naiveBayes(lie~., data=train.lie, na.action = na.pass)
+NB_e1071.l
+
+# Testing the model
+NB_e1071_Pred.l<- predict(NB_e1071.l, test.lie.nolabel)
+NB.p.df.l<- as.data.frame(NB_e1071_Pred.l)
+nb.l<- table(NB_e1071_Pred.l,test.lie.justlabel)
+
+# Calculating accuracy
+confusionMatrix(NB_e1071_Pred.l, test.lie.justlabel) # 57.14% accuracy
+
+newpred.nb <-cbind(data.frame(NB_e1071_Pred.l), data.frame(test.lie.justlabel))
+newpred.nb <-`colnames<-`(newpred.nb,c("actual","classified"))
+
+plot_CV(table(newpred.nb), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# Visualize the prediction versus the actual
+plot(NB_e1071_Pred.l)
+plot(test.lie.justlabel)
+
+# Calculating precision and recall
+# Source: https://stackoverflow.com/questions/33081702/accuracy-precision-and-recall-for-multi-class-model
+# Source: https://blog.revolutionanalytics.com/2016/03/com_class_eval_metrics_r.html#perclass
+# Precision is defined as the fraction of correct predictions for a certain class, 
+# whereas recall is the fraction of instances of a class that were correctly predicted. 
+(accuracy.nb.lie <- sum(diag(nb.l)) / sum(nb.l))
+(precision.nb.lie<- diag(nb.l) / rowSums(nb.l)) # Precision for each class
+(recall.nb.lie<- (diag(nb.l) / colSums(nb.l))) # Recall for each class
+df.accuracy <- cbind(model="NaiveBayes",prediction="LieDetection",accuracy=accuracy.nb.lie,precision_f=precision.nb.lie[1],precision_t=precision.nb.lie[2],recall_f=recall.nb.lie[1],recall_t=recall.nb.lie[2])
+####################################
+# SVM Lie Detection
+####################################
+
+# The cost parameter in the SVM means the tradeoff between misclassification and simplicity of the model
+# The cost parameter decides how much an SVM should be allowed to "bend" with the data. For a low cost, 
+# you aim for a smooth decision surface and for a higher cost, you aim to classify more points correctly. 
+# It is also simply referred to as the cost of misclassification.
+
+##################### Tuning w/ polynomial
+
+# We can "tune" the SVM by altering the cost
+tuned.l.1 <- tune(svm,lie~., data=train.lie,
+                kernel="polynomial", 
+                ranges=list(cost=c(.01,.1,1,10,100,1000)))
+summary(tuned.l.1)  ## This shows that the best cost is .1
+
+##################### Using tuned.p in SVM.1 model (polynomial)
+
+# Model development (polynomial kernal) w/ best cost from tuned.l.1
+SVM.l.1 <- svm(lie~., data=train.lie, kernel="polynomial", cost=0.6, scale=FALSE)
+print(SVM.l.1) # 54 support vectors
+# You can see that the number of support vectors is 54 - they are the points that are close to 
+# the boundary or on the wrong side of the boundary
+# Prediction for SVM.1
+(pred.l.1 <- predict(SVM.l.1, test.lie.nolabel, type="class"))
+# Calculating accuracy of SVM.1
+confusionMatrix(pred.l.1, test.lie.justlabel) # 51.43% accuracy
+# Confusion Matrix
+(Ptable.l.1 <- table(pred.l.1, test.lie.justlabel))
+# Misclassification Rate for Polynomial
+(MR.l.1<- 1 - sum(diag(Ptable.l.1))/sum(Ptable.l.1)) # 48.57%
+
+newpred.svm <-cbind(data.frame(pred.l.1), data.frame(test.lie.justlabel))
+newpred.svm <-`colnames<-`(newpred.svm,c("actual","classified"))
+
+plot_CV(table(newpred.svm), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+
+# Calculating precision and recall
+(accuracy.p.lie<- sum(diag(Ptable.l.1)) / sum(Ptable.l.1))
+(precision.p.lie<- diag(Ptable.l.1) / rowSums(Ptable.l.1)) # Precision for each class
+(recall.p.lie<- (diag(Ptable.l.1) / colSums(Ptable.l.1))) # Recall for each class
+
+df.accuracy <- rbind(df.accuracy,cbind(model="SVM-Polynomial",prediction="LieDetection",accuracy=accuracy.p.lie,precision_f=precision.p.lie[1],precision_t=precision.p.lie[2],recall_f=recall.p.lie[1],recall_t=recall.p.lie[2]))
+
+##################### Tuning w/ linear
+
+# We can "tune" the SVM by altering the cost
+tuned.l.2 <- tune(svm,lie~., data=train.lie,
+                kernel="linear", 
+                ranges=list(cost=c(.01,.1,1,10,100,1000)))
+summary(tuned.l.2)  ## This shows that the best cost is 1
+
+##################### Using tuned.l.2 in SVM.l.2 model (linear)
+
+# Model development (linear kernal)
+SVM.l.2 <- svm(lie~., data=train.lie, kernel="linear", cost=0.6, scale=FALSE)
+print(SVM.l.2) # 55 support vectors
+# Prediction for SVM.l.2
+(pred.l.2 <- predict(SVM.l.2, test.lie.nolabel, type="class"))
+# Calculating accuracy of SVM.2
+confusionMatrix(pred.l.2, test.lie.justlabel) # 51.43% accuracy
+# Confusion Matrix
+(Ptable.l.2 <- table(pred.l.2, test.lie.justlabel))
+# Misclassification Rate for linear
+(MR.l.2<- 1 - sum(diag(Ptable.l.2))/sum(Ptable.l.2)) # 48.57%
+
+newpred.svm.2 <-cbind(data.frame(pred.l.2), data.frame(test.lie.justlabel))
+newpred.svm.2 <-`colnames<-`(newpred.svm.2,c("actual","classified"))
+
+plot_CV(table(newpred.svm.2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# Calculating precision and recall
+(accuracy.l.lie<- sum(diag(Ptable.l.2)) / sum(Ptable.l.2))
+(precision.l.lie<- diag(Ptable.l.2) / rowSums(Ptable.l.2)) # Precision for each class
+(recall.l.lie<- (diag(Ptable.l.2) / colSums(Ptable.l.2))) # Recall for each class
+
+df.accuracy <- rbind(df.accuracy,cbind(model="SVM-Linear",prediction="LieDetection",accuracy=accuracy.l.lie,precision_f=precision.l.lie[1],precision_t=precision.l.lie[2],recall_f=recall.l.lie[1],recall_t=recall.l.lie[2]))
+
+##################### Tuning w/ radial
+
+# We can "tune" the SVM by altering the cost
+tuned.l.3 <- tune(svm,lie~., data=train.lie,
+                kernel="radial", 
+                ranges=list(cost=c(.01,.1,1,10,100,1000)))
+summary(tuned.l.3)  ## This shows that the best cost is .01
+
+##################### Using tuned.l.3 in SVM.3 model (radial)
+
+# Model development (radial kernal)
+SVM.l.3 <- svm(lie~., data=train.lie, kernel="radial", cost=.45, scale=FALSE)
+print(SVM.l.3) # 54 support vectors
+# Prediction for SVM.3
+(pred.l.3 <- predict(SVM.l.3, test.lie.nolabel, type="class"))
+# Calculating accuracy of SVM.3
+confusionMatrix(pred.l.3, test.lie.justlabel) # 37% accuracy
+# Confusion Matrix
+(Ptable.l.3 <- table(pred.l.3, test.lie.justlabel))
+# Misclassification Rate for radial
+(MR.l.3<- 1 - sum(diag(Ptable.l.3))/sum(Ptable.l.3)) # 48.57%
+
+newpred.svm.3 <-cbind(data.frame(pred.l.3), data.frame(test.lie.justlabel))
+newpred.svm.3 <-`colnames<-`(newpred.svm.3,c("actual","classified"))
+
+plot_CV(table(newpred.svm.3), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# Calculating precision and recall
+(accuracy.r.lie<- sum(diag(Ptable.l.3)) / sum(Ptable.l.3))
+(precision.r.lie<- diag(Ptable.l.3) / rowSums(Ptable.l.3)) # Precision for each class
+(recall.r.lie<- (diag(Ptable.l.3) / colSums(Ptable.l.3))) # Recall for each class
+
+df.accuracy <- rbind(df.accuracy,cbind(model="SVM-Radial",prediction="LieDetection",accuracy=accuracy.r.lie,precision_f=precision.r.lie[1],precision_t=precision.r.lie[2],recall_f=recall.r.lie[1],recall_t=recall.r.lie[2]))
+
+####################################
+# MNB Sentiment Analysis
+####################################
+
+# Source: https://www.edureka.co/blog/naive-bayes-in-r/
+
+# Training the model using naiveBayes
+NB_e1071.s<- naiveBayes(sentiment~., data=train.sentiment, na.action = na.pass)
+NB_e1071.s
+
+# Testing the model
+NB_e1071_Pred.s<- predict(NB_e1071.s, test.sentiment.nolabel)
+NB.p.df.s<- as.data.frame(NB_e1071_Pred.s)
+nb.s<- table(NB_e1071_Pred.s,test.sentiment.justlabel)
+
+# Calculating accuracy
+confusionMatrix(NB_e1071_Pred.s, test.sentiment.justlabel) # 77.14% accuracy
+
+newpred.nb.2 <-cbind(data.frame(NB_e1071_Pred.s), data.frame(test.sentiment.justlabel))
+newpred.nb.2 <-`colnames<-`(newpred.nb.2,c("actual","classified"))
+
+plot_CV(table(newpred.nb.2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+
+# Visualize the prediction versus the actual
+plot(NB_e1071_Pred.s)
+plot(test.sentiment.justlabel)
+
+# Calculating precision and recall
+(accuracy.nb.sentiment<- sum(diag(nb.s)) / sum(nb.s))
+(precision.nb.sentiment<- diag(nb.s) / rowSums(nb.s)) # Precision for each class
+(recall.nb.sentiment<- (diag(nb.s) / colSums(nb.s))) # Recall for each class
+
+df.accuracy <- rbind(df.accuracy,cbind(model="NaiveBayes",prediction="SetimentAnalysis",accuracy=accuracy.nb.sentiment,precision_f=precision.nb.sentiment[1],precision_t=precision.nb.sentiment[2],recall_f=recall.nb.sentiment[1],recall_t=recall.nb.sentiment[2]))
+
+####################################
+# SVM Sentiment Analysis
+####################################
+
+# The cost parameter in the SVM means the tradeoff between misclassification and simplicity of the model
+# The cost parameter decides how much an SVM should be allowed to "bend" with the data. For a low cost, 
+# you aim for a smooth decision surface and for a higher cost, you aim to classify more points correctly. 
+# It is also simply referred to as the cost of misclassification.
+
+##################### Tuning w/ polynomial
+
+# We can "tune" the SVM by altering the cost
+tuned.s.1 <- tune(svm,sentiment~., data=train.sentiment,
+                  kernel="polynomial", 
+                  ranges=list
+                  (cost=c(.01,.1,1,10,100,1000)))
+summary(tuned.s.1)  ## This shows that the best cost is 100
+
+##################### Using tuned.s.1 in SVM.s.1 model (polynomial)
+
+# Model development (polynomial kernal) w/ best cost from tuned.l.1
+SVM.s.1 <- svm(sentiment~., data=train.sentiment, kernel="polynomial", cost=0.093, scale=FALSE)
+print(SVM.s.1) # 50 support vectors
+# You can see that the number of support vectors is 50 - they are the points that are close to 
+# the boundary or on the wrong side of the boundary
+# Prediction for SVM.s.1
+(pred.s.1 <- predict(SVM.s.1, test.sentiment.nolabel, type="class"))
+# Calculating accuracy of SVM.1
+confusionMatrix(pred.s.1, test.sentiment.justlabel) # 40% accuracy
+# Confusion Matrix
+(Ptable.s.1 <- table(pred.s.1, test.sentiment.justlabel))
+# Misclassification Rate for Polynomial
+(MR.s.1<- 1 - sum(diag(Ptable.s.1))/sum(Ptable.s.1)) # 60%
+
+
+newpred.svm.4 <-cbind(data.frame(pred.s.1), data.frame(test.sentiment.justlabel))
+newpred.svm.4 <-`colnames<-`(newpred.svm.4,c("actual","classified"))
+
+
+plot_CV(table(newpred.svm.4), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+# Calculating precision and recall
+(accuracy.p.sentiment<- sum(diag(Ptable.s.1)) / sum(Ptable.s.1))
+(precision.p.sentiment<- diag(Ptable.s.1) / rowSums(Ptable.s.1)) # Precision for each class
+(recall.p.sentiment<- (diag(Ptable.s.1) / colSums(Ptable.s.1))) # Recall for each class
+
+df.accuracy <- rbind(df.accuracy,cbind(model="SVM-Polynomial",prediction="SetimentAnalysis",accuracy=accuracy.p.sentiment,precision_f=precision.p.sentiment[1],precision_t=precision.p.sentiment[2],recall_f=recall.p.sentiment[1],recall_t=recall.p.sentiment[2]))
+
+
+##################### Tuning w/ linear
+
+# We can "tune" the SVM by altering the cost
+tuned.s.2 <- tune(svm,sentiment~., data=train.sentiment,
+                  kernel="linear", 
+                  ranges=list(cost=c(.01,.1,1,10,100,1000)))
+summary(tuned.s.2)  ## This shows that the best cost is 0.1
+
+##################### Using tuned.s.2 in SVM.s.2 model (linear)
+
+# Model development (linear kernal)
+SVM.s.2 <- svm(sentiment~., data=train.sentiment, kernel="linear", cost=0.1, scale=FALSE)
+print(SVM.s.2) # 53 support vectors
+# Prediction for SVM.s.2
+(pred.s.2 <- predict(SVM.s.2, test.sentiment.nolabel, type="class"))
+# Calculating accuracy of SVM.s.2
+confusionMatrix(pred.s.2, test.sentiment.justlabel) # 40% accuracy
+# Confusion Matrix
+(Ptable.s.2 <- table(pred.s.2, test.sentiment.justlabel))
+# Misclassification Rate for linear
+(MR.s.2<- 1 - sum(diag(Ptable.s.2))/sum(Ptable.s.2)) # 60%
+
+newpred.svm.5 <-cbind(data.frame(pred.s.2), data.frame(test.sentiment.justlabel))
+newpred.svm.5 <-`colnames<-`(newpred.svm.4,c("actual","classified"))
+
+
+plot_CV(table(newpred.svm.5), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# Calculating precision and recall
+(accuracy.l.sentiment<- sum(diag(Ptable.s.2)) / sum(Ptable.s.2))
+(precision.l.sentiment<- diag(Ptable.s.2) / rowSums(Ptable.s.2)) # Precision for each class
+(recall.l.sentiment<- (diag(Ptable.s.2) / colSums(Ptable.s.2))) # Recall for each class
+
+df.accuracy <- rbind(df.accuracy,cbind(model="SVM-Linear",prediction="SetimentAnalysis",accuracy=accuracy.l.sentiment,precision_f=precision.l.sentiment[1],precision_t=precision.l.sentiment[2],recall_f=recall.l.sentiment[1],recall_t=recall.l.sentiment[2]))
+
+##################### Tuning w/ radial
+
+# We can "tune" the SVM by altering the cost
+tuned.s.3 <- tune(svm,sentiment~., data=train.sentiment,
+                  kernel="radial", 
+                  ranges=list(cost=c(.01,.1,1,10,100,1000)))
+summary(tuned.s.3)  ## This shows that the best cost is 10
+
+##################### Using tuned.s.3 in SVM.s.3 model (radial)
+
+# Model development (radial kernal)
+SVM.s.3 <- svm(sentiment~., data=train.sentiment, kernel="radial", cost=10, scale=FALSE)
+print(SVM.s.3) # 53 support vectors
+# Prediction for SVM.s.3
+(pred.s.3 <- predict(SVM.s.3, test.sentiment.nolabel, type="class"))
+# Calculating accuracy of SVM.s.3
+confusionMatrix(pred.s.3, test.sentiment.justlabel) # 40% accuracy
+# Confusion Matrix
+(Ptable.s.3 <- table(pred.s.3, test.sentiment.justlabel))
+# Misclassification Rate for radial
+(MR.s.3<- 1 - sum(diag(Ptable.s.3))/sum(Ptable.s.3)) # 60%
+
+newpred.svm.6 <-cbind(data.frame(pred.s.3), data.frame(test.sentiment.justlabel))
+newpred.svm.6 <-`colnames<-`(newpred.svm.4,c("actual","classified"))
+
+
+plot_CV(table(newpred.svm.6), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+# Calculating precision and recall
+(accuracy.r.sentiment<- sum(diag(Ptable.s.3)) / sum(Ptable.s.3))
+(precision.r.sentiment<- diag(Ptable.s.3) / rowSums(Ptable.s.3)) # Precision for each class
+(recall.r.sentiment<- (diag(Ptable.s.3) / colSums(Ptable.s.3))) # Recall for each class
+
+df.accuracy <- rbind(df.accuracy,cbind(model="SVM-Radial",prediction="SetimentAnalysis",accuracy=accuracy.r.sentiment,precision_f=precision.r.sentiment[1],precision_t=precision.r.sentiment[2],recall_f=recall.r.sentiment[1],recall_t=recall.r.sentiment[2]))
+
+####################################
+# Information Gain lie~.
+####################################
+
+# Source: https://cran.r-project.org/web/packages/FSelector/FSelector.pdf
+# page 9 of 18
+# The algorithms find weights of discrete attributes basing on their correlation with continous class attribute.
+ig.lie<- gain.ratio(formula = lie ~ ., data = train.lie)
+print(ig.lie)
+df.ig.lie <-data.frame(ig.lie)
+df.ig.lie$attr <-row.names(df.ig.lie)
+df.ig.lie <-`row.names<-`(df.ig.lie,NULL)
+df.ig.lie <-df.ig.lie[order(df.ig.lie$attr_importance,decreasing = TRUE),]
+subset2.lie<- cutoff.k(ig.lie, 20) # chooses k best attributes
+f2.lie<- as.simple.formula(subset2.lie, "lie")
+print(f2.lie)
+
+####################################
+# Information Gain sentiment~.
+####################################
+
+# Source: https://cran.r-project.org/web/packages/FSelector/FSelector.pdf
+# page 9 of 18
+# The algorithms find weights of discrete attributes basing on their correlation with continous class attribute.
+ig.sentiment<- gain.ratio(formula = sentiment ~ ., data = train.sentiment)
+print(ig.sentiment)
+df.ig.sentiment <-data.frame(ig.sentiment)
+df.ig.sentiment$attr <-row.names(df.ig.sentiment)
+df.ig.sentiment <-`row.names<-`(df.ig.sentiment,NULL)
+df.ig.sentiment <-df.ig.sentiment[order(df.ig.sentiment$attr_importance,decreasing = TRUE),]
+subset2.sentiment<- cutoff.k(ig.sentiment, 25) # chooses k best attributes
+f2.sentiment<- as.simple.formula(subset2.sentiment, "sentiment")
+print(f2.sentiment)
+
+```
+
+```{r Results}
+
+####################################
+# Chi^2 lie~.
+####################################
+# Source: https://stats.stackexchange.com/questions/24179/how-exactly-does-chi-square-feature-selection-work
+# The algorithm finds weights of discrete attributes basing on a chi-squared test.
+
+weights.lie<- chi.squared(lie~., train.lie)
+print(weights.lie)
+df.weights.lie <- data.frame(weights.lie)
+df.weights.lie$attr <-row.names(df.weights.lie)
+df.weights.lie <-`row.names<-`(df.weights.lie,NULL)
+df.weights.lie <-df.weights.lie[order(df.weights.lie$attr_importance,decreasing = TRUE),]
+subset2.lie<- cutoff.k(weights.lie, 20)
+f2.lie<- as.simple.formula(subset2.lie, "Class")
+print(f2.lie)
+
+####################################
+# Chi^2 sentiment~.
+####################################
+# Source: https://stats.stackexchange.com/questions/24179/how-exactly-does-chi-square-feature-selection-work
+# The algorithm finds weights of discrete attributes basing on a chi-squared test.
+weights.sentiment<- chi.squared(sentiment~., train.sentiment)
+print(weights.sentiment)
+df.weights.sentiment <- data.frame(weights.sentiment)
+df.weights.sentiment$attr <-row.names(df.weights.sentiment)
+df.weights.sentiment <-`row.names<-`(df.weights.sentiment,NULL)
+df.weights.sentiment <-df.weights.sentiment[order(df.weights.sentiment$attr_importance,decreasing = TRUE),]
+subset2.sentiment<- cutoff.k(weights.sentiment, 20)
+f2.sentiment<- as.simple.formula(subset2.sentiment, "Class")
+print(f2.sentiment)
+
+ `colnames<-`(df.accuracy,c("model","prediction","accuracy","precision(f/p)","precision(t/n)","recall(f/p)","recall(t/n)"))
+
+df.accuracy$accuracy <-as.integer(substr(df.accuracy$accuracy,3,4))
+df.accuracy$`precision(f/p)` <-as.integer(substr(df.accuracy$`precision(f/p)`,3,4))
+df.accuracy$`precision(t/n)` <-as.integer(substr(df.accuracy$`precision(t/n)`,3,4))
+df.accuracy$`recall(f/p)` <-as.integer(substr(df.accuracy$`recall(f/p)`,3,4))
+df.accuracy$`recall(t/n)` <-as.integer(substr(df.accuracy$`recall(t/n)`,3,4))
+df.accuracy<-`rownames<-`(df.accuracy,NULL)
+df.accuracy[2,5] <-0
+df.accuracy[2,7] <-0
+
+df.accuracy<-`colnames<-`(df.accuracy,c("model","prediction","accuracy","precision_f_p","precision_t_n","recall_f_p","recall_t_n"))
+
+ggplot(data.frame(df.accuracy), aes(model, accuracy)) +
+    geom_linerange(
+        aes(x = model,ymin=0, ymax=accuracy , group = model), 
+        color = "lightgray", size = 1.5,
+        position = position_dodge2(0.3)
+    )+
+    geom_point(
+        aes(color = prediction),
+        position = position_dodge2(0.3), size = 3
+    ) +labs (x="Model",y="Accuracy in Percentage",title = "Accuracy comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+
+ggplot(data.frame(df.accuracy), aes(model, precision_f_p)) +
+    geom_linerange(
+        aes(x = model,ymin=0, ymax=precision_f_p , group = model), 
+        color = "lightgray", size = 1.5,
+        position = position_dodge2(0.3)
+    )+
+    geom_point(
+        aes(color = prediction),
+        position = position_dodge2(0.3), size = 3
+    ) +labs (x="Model",y="Precision(f/p) in Percentage",title = "Precision(f/p) comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+ggplot(data.frame(df.accuracy), aes(model, precision_t_n)) +
+    geom_linerange(
+        aes(x = model,ymin=0, ymax=precision_t_n , group = model), 
+        color = "lightgray", size = 1.5,
+        position = position_dodge2(0.3)
+    )+
+    geom_point(
+        aes(color = prediction),
+        position = position_dodge2(0.3), size = 3
+    ) +labs (x="Model",y="Precision(t/n) in Percentage",title = "Precision(t/n) comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+ggplot(data.frame(df.accuracy), aes(model, recall_f_p)) +
+    geom_linerange(
+        aes(x = model,ymin=0, ymax=recall_f_p , group = model), 
+        color = "lightgray", size = 1.5,
+        position = position_dodge2(0.3)
+    )+
+    geom_point(
+        aes(color = prediction),
+        position = position_dodge2(0.3), size = 3
+    ) +labs (x="Model",y="recall(f/p) in Percentage",title = "recall(f/p) comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+ggplot(data.frame(df.accuracy), aes(model, recall_t_n)) +
+    geom_linerange(
+        aes(x = model,ymin=0, ymax=recall_t_n , group = model), 
+        color = "lightgray", size = 1.5,
+        position = position_dodge2(0.3)
+    )+
+    geom_point(
+        aes(color = prediction),
+        position = position_dodge2(0.3), size = 3
+    ) +labs (x="Model",y="recall(t/n) in Percentage",title = "recall(t/n) comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+```
+

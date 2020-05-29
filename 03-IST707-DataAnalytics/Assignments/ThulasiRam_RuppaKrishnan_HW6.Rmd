@@ -1,0 +1,1313 @@
+title: "ThulasiRam_RuppaKrishnan_HW6"
+author: "Thulasiram Ruppa Krishnan"
+date: "May 19, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(RWeka)      # for RWeka
+library(stringr)
+library(stringi)
+library(slam)
+library(quanteda)
+## Note - this includes SnowballC
+library(SnowballC)
+library(arules)
+library(proxy)
+library(Matrix)
+library(plyr) ## for adply
+library(ggplot2)
+library(mclust) # for Mclust EM clustering
+library(knitr)
+library(lda) 
+library(reshape2)
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(Cairo)
+library(scales)
+library(psych)
+library(readr)
+library(cvTools)
+library(caret)
+library(tree)
+library(e1071)
+library(naivebayes)
+library(dplyr)
+library(tidyr)
+library(magrittr) # for %<>%
+library(Momocs)
+library(xlsx)
+library(class) # for knn
+library(MASS)
+library(mlr)
+
+```
+
+
+
+## Clear workspace
+```{r}
+# Clear objects
+rm(list=ls())
+## Set your working director to the path were your code AND datafile is
+setwd("~/01 Personal/MS/IST 707/week7")
+getwd()
+#setwd("C://Users//rkrishnan//Documents//01 Personal//MS//IST 707//week4//temp")
+
+```
+
+
+##Data Load
+```{r}
+dr_train <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/train.csv")
+dr_train$instance <-row.names(dr_train)
+dr_train %<>% mutate_if(is.double,as.integer)
+dr_test <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/test.csv")
+
+# mnist <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/mnist_train.csv", col_names = FALSE)
+# mnist$instance <-row.names(mnist)
+# 
+# mnist %<>% mutate_if(is.double,as.integer)
+# writing 1 record to a file to take a look at the data
+write_csv(dr_train %>% head(1),"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/train_head_1.csv")
+# write_csv(mnist %>% head(1),"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/mnist_head_1.csv")
+
+dr_train <- na.omit(dr_train)
+str(dr_train)
+head(dr_train)
+unique(dr_train$label)
+table(dr_train$label)
+hist(dr_train$label)
+dr_train$label <- as.factor(dr_train$label)
+
+summary(dr_train)
+
+```
+
+# Feature Extraction using  Discrete cosine transform
+```{r}
+
+#as.vector(DCT2D(t(matrix(as.numeric(dr_train[4,-c(1,786)])-128,28,28)),returnmat = TRUE))
+# Extract features using DCT
+# Discrete cosine transform (DCT) is a powerful transform to extract proper features for face recognition. 
+get_dtc <- function(pixel)
+{return(DCT2D(as.matrix(pixel),returnmat = TRUE))}
+
+get_dtc_2d <- function(pixel)
+{return(as.list(as.vector(DCT2D(t(matrix(as.numeric(pixel)-128,28,28)),returnmat = TRUE))))}
+
+# for (i in 1:nrow(dr_train)){
+# if (i==1)  {
+# new_dr_train <- cbind(dr_train[i,c(1,786)],data.frame(get_dtc(dr_train[i,-c(1,786)])))
+# }
+# else {
+# new_dr_train <- rbind(new_dr_train,cbind(dr_train[i,c(1,786)],data.frame(get_dtc(dr_train[i,-c(1,786)]))))
+# }
+# }
+# 
+# head(new_dr_train)
+# # Feature Extraction is a long running process and hence storing the result set in a file to reload extracted features when required
+# write.csv(new_dr_train,"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/new_dr_train.csv")
+
+new_dr_train <-read.csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/new_dr_train.csv")
+new_dr_train$label <- as.factor(new_dr_train$label)
+new_dr_train <- new_dr_train[,-1]
+head(new_dr_train)
+X <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/col_names.csv",col_names = FALSE)
+
+# for (i in 1:nrow(dr_train)){
+# if (i==1)  {
+# new_dr_train_2d <- cbind(dr_train[i,c(1,786)], as.data.frame(get_dtc_2d(dr_train[i,-c(1,786)]),col.names = X$X1))
+# }
+# else {
+# new_dr_train_2d <- rbind(new_dr_train_2d,cbind(dr_train[i,c(1,786)],as.data.frame(get_dtc_2d(dr_train[i,-c(1,786)]),col.names = X$X1)))
+# }
+# }
+# 
+# head(new_dr_train_2d)
+# # Feature Extraction is a long running process and hence storing the result set in a file to reload extracted features when required
+# write.csv(new_dr_train_2d,"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/new_dr_train_2d.csv")
+
+new_dr_train_2d <-read.csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week7/new_dr_train_2d.csv")
+new_dr_train_2d$label <- as.factor(new_dr_train_2d$label)
+new_dr_train_2d <- new_dr_train_2d[,-1]
+new_dr_train_2d %<>% mutate_if(is.numeric,as.integer)
+```
+
+# Data Analysis
+```{r}
+# Get the actual value in id_col
+n=nrow(dr_train);K=10; sizeblock=n%/%K;alea=runif(n);rang=rank(alea);bloc=(rang-1)%/%sizeblock+1;
+bloc[bloc==K+1]=K;bloc=factor(bloc); bloc=as.factor(bloc);print(summary(bloc))
+
+
+
+#http://varianceexplained.org/r/digit-eda/
+
+# Convert all the pixel value in 2 dimensions
+
+pixels_gathered <- 
+  dr_train[bloc!=k,] %>%
+  head(10000) %>% 
+  gather(pixel, value, -label, -instance) %>%
+  tidyr::extract(pixel, "pixel", "(\\d+)", convert = TRUE) %>%
+  mutate(pixel = pixel,
+         x = pixel %% 28,
+         y = 28 - pixel %/% 28) 
+
+(pixels_gathered)
+(pixels_gathered[order(pixels_gathered$value,decreasing = TRUE),])
+
+# look at the Histogram of the pixel value 
+hist(pixels_gathered$value)
+
+theme_set(theme_light())
+
+# print 2 dimensional image
+pixels_gathered %>% 
+  filter(instance <= 12) %>%
+  ggplot(aes(x, y, fill = value),colour="white") + xlim(0,28) +ylim(0,28) +
+  geom_tile() +
+  facet_wrap(~ label) + scale_fill_gradient(low = "steelblue",high = "white")
+
+# calculate average pixel value
+pixel_summary <- pixels_gathered %>%
+  dplyr::group_by(x, y, label) %>%
+  dplyr::summarize(mean_value = mean(value)) %>%
+  dplyr::ungroup()
+
+(pixel_summary[order(pixel_summary$mean_value,decreasing = TRUE),])
+
+pixel_summary %>% 
+  ggplot(aes(x, y, fill = mean_value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "white", high = "black", mid = "gray", midpoint = 127.5) +
+  facet_wrap(~ label, nrow = 2) +
+  labs(title = "Average value of each pixel",fill = "Average value") +
+  theme_void()
+
+# Outliers 
+
+pixels_joined <- pixels_gathered %>%
+  dplyr::inner_join(pixel_summary, by = c("label", "x", "y"))
+
+"image_distances" <- pixels_joined %>%
+  dplyr::group_by(label, instance) %>%
+  dplyr::summarize(euclidean_distance = sqrt(mean((value - mean_value) ^ 2)))
+
+image_distances
+
+ggplot(image_distances, aes(factor(label), euclidean_distance)) +
+  geom_boxplot() +
+  labs(x = "Digit",
+       y = "Euclidean distance to the digit centroid")
+
+# images of digits with top  variances
+worst_instances <- image_distances %>%
+  dplyr::top_n(6, euclidean_distance) %>%
+  mutate(number = rank(-euclidean_distance))
+
+pixels_gathered %>%
+  dplyr::inner_join(worst_instances, by = c("label", "instance")) %>%
+  ggplot(aes(x, y, fill = value)) +
+  geom_tile(show.legend = FALSE) +
+  scale_fill_gradient2(low = "white", high = "black", mid = "gray", midpoint = 127.5) +
+  facet_grid(label ~ number) +
+  labs(title = "Least typical digits",
+       subtitle = "The 6 digits within each label that had the greatest distance to the centroid") +
+  theme_void() +
+  theme(strip.text = element_blank())
+
+
+#Pairwise comparisons of digits
+pixel_summary$label <- as.integer(pixel_summary$label)
+digit_differences <- crossing(compare1 = 0:9, compare2 = 0:9) %>%
+  filter(compare1 != compare2) %>%
+  mutate(negative = compare1, positive = compare2) %>%
+  gather(class, label, positive, negative) %>%
+  dplyr::inner_join(pixel_summary, by = "label") %>%
+  dplyr::select(-label) %>%
+  spread(class, mean_value)
+
+ggplot(digit_differences, aes(x, y, fill = positive - negative)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = .5) +
+  facet_grid(compare2 ~ compare1) +
+  theme_void() +
+  labs(title = "Pixels that distinguish pairs of digits",
+       subtitle = "Red means the pixel is darker for that row's digit, and blue means the pixel is darker for that column's digit.")
+
+```
+
+```{r}
+# # Evaluate models uses k-fold cross-validation
+# install.packages("DAAG")
+# library("DAAG")
+# 
+# cv.lm(data=dat, form.lm=mod1, m= 10, plotit = F)
+
+
+# #define error matrix
+# err <- matrix(NA,nrow=1,ncol=10)
+# errcv=err
+# 
+# #creation of folds
+# for(c in 1:10){
+# 
+# n=nrow(df);K=10; sizeblock= n%/%K;alea=runif(n);rang=rank(alea);bloc=(rang-1)%/%sizeblock+1;bloc[bloc==K+1]=K;bloc=factor(bloc); bloc=as.factor(bloc);print(summary(bloc))
+# 
+# for(k in 1:10){
+# 
+# #rpart
+# fit=rpart(type~., data=df[bloc!=k,],xval=0) ; (predict(fit,df[bloc==k,]))
+# answers=(predict(fit,df[bloc==k,],type="class")==resp[bloc==k])
+# err[1,k]=1-(sum(answers)/length(answers))
+# 
+# }
+# 
+# err
+# errcv[,c]=rowMeans(err, na.rm = FALSE, dims = 1)
+# 
+# }
+# errcv
+
+
+# # Generate some test data
+# x <- runif(100)*10 #Random values between 0 and 10
+# y <- x+rnorm(100)*.1 #y~x+error
+# dataset <- data.frame(x,y) #Create data frame
+# plot(dataset$x,dataset$y) #Plot the data
+# 
+# #install.packages("cvTools")
+# library(cvTools) #run the above line if you don't have this library
+# 
+# k <- 10 #the number of folds
+# 
+# folds <- cvFolds(NROW(dataset), K=k)
+# dataset$holdoutpred <- rep(0,nrow(dataset))
+# 
+# for(i in 1:k){
+#   train <- dataset[folds$subsets[folds$which != i], ] #Set the training set
+#   validation <- dataset[folds$subsets[folds$which == i], ] #Set the validation set
+# 
+#   newlm <- lm(y~x,data=train) #Get your new linear model (just fit on the train data)
+#   newpred <- predict(newlm,newdata=validation) #Get the predicitons for the validation set (from the model just fit on the train data)
+# 
+#   dataset[folds$subsets[folds$which == i], ]$holdoutpred <- newpred #Put the hold out prediction in the data set for later use
+# }
+# 
+# dataset$holdoutpred #do whatever you want with these predictions
+
+
+# #Randomly shuffle the data
+# yourData<-yourData[sample(nrow(yourData)),]
+# 
+# #Create 10 equally size folds
+# folds <- cut(seq(1,nrow(yourData)),breaks=10,labels=FALSE)
+# 
+# #Perform 10 fold cross validation
+# for(i in 1:10){
+#     #Segement your data by fold using the which() 
+#     testIndexes <- which(folds==i,arr.ind=TRUE)
+#     testData <- yourData[testIndexes, ]
+#     trainData <- yourData[-testIndexes, ]
+#     #Use the test and train data partitions however you desire...
+# }
+
+
+# require(caret)
+# flds <- createFolds(y, k = 10, list = TRUE, returnTrain = FALSE)
+# names(flds)[1] <- "train"
+
+
+#Create trainign and test data set
+# nrows <-nrow(dr_train)
+# nrows
+# cutpoint <-floor(nrows/10*2)
+# cutpoint
+# rand <- head(sample((row.names(dr_train)), nrows,replace = FALSE))
+
+```
+
+
+
+# Create 10 folds training data for cross validation
+```{r}
+
+
+
+#creation of folds
+#for(c in 1:10){
+
+n=nrow(dr_train);K=10; sizeblock=n%/%K;alea=runif(n);rang=rank(alea);bloc=(rang-1)%/%sizeblock+1;
+bloc[bloc==K+1]=K;bloc=factor(bloc); bloc=as.factor(bloc);print(summary(bloc))
+
+
+for(k in 1:10){
+
+
+
+#######################################
+# Using Naive Bayes (e1071)
+#######################################
+
+# Training and Testing the model with original pixel, DCT transformed pixel value in 1D and DCT transformed pixel value in 2D
+
+myids=c("label")
+id_col= dr_train[which(bloc==k),1]
+
+# Capture start time of the model
+df_execution_time <- data.frame(Model="NB-e1071",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL")
+row.names(df_execution_time) <-NULL
+df_execution_time$end_time<-as.character(df_execution_time$end_time)
+df_execution_time$start_time<-as.character(df_execution_time$start_time)
+df_execution_time$Transformation<-as.character(df_execution_time$Transformation)
+df_execution_time$Model<-as.character(df_execution_time$Model)
+df_execution_time$CV<-as.character(df_execution_time$CV)
+df_execution_time$test_start_time<-as.character(df_execution_time$test_start_time)
+df_execution_time$test_end_time<-as.character(df_execution_time$test_end_time)
+#run the model
+nb=naiveBayes(label~., data = dr_train[bloc!=k,-c(786)], laplace = 1, na.action = na.pass)
+# Capture end time of the model
+df_execution_time[1,5] <- as.character(Sys.time())
+
+
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="NB-e1071",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+#run the model
+nb_new=naiveBayes(label~., data = new_dr_train[bloc!=k,-c(2)], laplace = 1, na.action = na.pass)
+# Capture end time of the model
+df_execution_time[2,5] <- as.character(Sys.time())
+
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="NB-e1071",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+#run the model
+nb_new2=naiveBayes(label~., data = new_dr_train_2d[bloc!=k,-c(2)], laplace = 1, na.action = na.pass)
+# Capture end time of the model
+df_execution_time[3,5] <- as.character(Sys.time())
+
+# Testing the model
+df_execution_time[1,6] <- as.character(Sys.time())
+pred.nb=predict(nb, newdata=(dr_train[bloc==k,-c(1,786)]), type=c("class"))
+df_execution_time[1,7] <- as.character(Sys.time())
+df_execution_time[2,6] <- as.character(Sys.time())
+pred.nb_new=predict(nb_new, newdata=(new_dr_train[bloc==k,-c(1,2)]), type=c("class"))
+df_execution_time[2,7] <- as.character(Sys.time())
+df_execution_time[3,6] <- as.character(Sys.time())
+pred.nb_new2=predict(nb_new2, newdata=(new_dr_train_2d[bloc==k,-c(1,2)]), type=c("class"))
+df_execution_time[3,7] <- as.character(Sys.time())
+
+# Cross Validation
+# head(pred.nb)
+# head(new_dr_train)
+
+newpred.nb <-cbind(id_col, pred.nb)
+newpred.nb <-`colnames<-`(newpred.nb,c("actual","classified"))
+newpred.nb_new=cbind(id_col, pred.nb_new)
+newpred.nb_new <-`colnames<-`(newpred.nb_new,c("actual","classified"))
+newpred.nb_new2=cbind(id_col, pred.nb_new2)
+newpred.nb_new2 <-`colnames<-`(newpred.nb_new2,c("actual","classified"))
+
+# table(pred.nb)
+# table(pred.nb_new)
+# table(pred.nb_new2)
+# 
+# table(newpred.nb)
+# table(newpred.nb_new)
+# table(newpred.nb_new2)
+
+confusionMatrix(pred.nb,id_col$label)
+confusionMatrix(pred.nb_new,id_col$label)
+confusionMatrix(pred.nb_new2,id_col$label)
+
+
+plot_CV(table(newpred.nb), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.nb_new), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.nb_new2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+
+# store accuracy for plot
+df_accuracy <- cbind(Model="NB-e1071",CV=k,Transformation="None",accuracy=sum(pred.nb==id_col$label)/length(id_col$label))
+df_accuracy <- rbind(df_accuracy,cbind(Model="NB-e1071",CV=k,Transformation="DCT",accuracy=sum(pred.nb_new==id_col$label)/length(id_col$label)))
+df_accuracy <- rbind(df_accuracy,cbind(Model="NB-e1071",CV=k,Transformation="DCT_2D",accuracy=sum(pred.nb_new2==id_col$label)/length(id_col$label)))
+
+
+#######################################
+# Using Naive Bayes (naivebayes)
+#######################################
+
+# https://cran.r-project.org/web/packages/naivebayes/naivebayes.pdf
+
+# Training the model using naive_bayes
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="NB-naivebayes",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+nb2=naive_bayes(label~., data = dr_train[bloc!=k,-c(786)], laplace = 1, na.action = na.pass)
+# Capture end time of the model
+df_execution_time[4,5] <- as.character(Sys.time())
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="NB-naivebayes",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+nb2_new=naive_bayes(label~., data = new_dr_train[bloc!=k,-c(2)], laplace = 1, na.action = na.pass)
+# Capture end time of the model
+df_execution_time[5,5] <- as.character(Sys.time())
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="NB-naivebayes",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+nb2_new2=naiveBayes(label~., data = new_dr_train_2d[bloc!=k,-c(2)], laplace = 1, na.action = na.pass)
+# Capture end time of the model
+df_execution_time[6,5] <- as.character(Sys.time())
+
+# Testing the model
+df_execution_time[4,6] <- as.character(Sys.time())
+pred2.nb=predict(nb2, newdata=(dr_train[bloc==k,-c(1,786)]), type=c("class"))
+df_execution_time[4,7] <- as.character(Sys.time())
+
+df_execution_time[5,6] <- as.character(Sys.time())
+pred2.nb_new=predict(nb2_new, newdata=(new_dr_train[bloc==k,-c(1,2)]), type=c("class"))
+df_execution_time[5,7] <- as.character(Sys.time())
+
+df_execution_time[6,6] <- as.character(Sys.time())
+pred2.nb_new2=predict(nb2_new2, newdata=(new_dr_train_2d[bloc==k,-c(1,2)]), type=c("class"))
+df_execution_time[6,7] <- as.character(Sys.time())
+# Calculating accuracy
+
+# Cross Validation
+table(pred2.nb)
+table(pred2.nb_new)
+table(pred2.nb_new2)
+
+newpred2.nb=cbind(id_col, pred2.nb)
+newpred2.nb <-`colnames<-`(newpred2.nb,c("actual","classified"))
+newpred2.nb_new=cbind(id_col, pred2.nb_new)
+newpred2.nb_new <-`colnames<-`(newpred2.nb_new,c("actual","classified"))
+newpred2.nb_new2=cbind(id_col, pred2.nb_new2)
+newpred2.nb_new2 <-`colnames<-`(newpred2.nb_new2,c("actual","classified"))
+
+table(newpred2.nb)
+table(newpred2.nb_new)
+table(newpred2.nb_new2)
+
+confusionMatrix(pred2.nb,id_col$label)
+confusionMatrix(pred2.nb_new,id_col$label)
+confusionMatrix(pred2.nb_new2,id_col$label)
+
+plot_CV(table(newpred2.nb), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred2.nb_new), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred2.nb_new2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+df_accuracy <- rbind(df_accuracy,cbind(Model="NB-naivebayes",CV=k,Transformation="None",accuracy=sum(pred2.nb==id_col$label)/length(id_col$label)))
+df_accuracy <- rbind(df_accuracy,cbind(Model="NB-naivebayes",CV=k,Transformation="DCT",accuracy=sum(pred2.nb_new==id_col$label)/length(id_col$label)))
+df_accuracy <- rbind(df_accuracy,cbind(Model="NB-naivebayes",CV=k,Transformation="DCT_2D",accuracy=sum(pred2.nb_new2==id_col$label)/length(id_col$label)))
+
+
+# Plot Variable performance
+
+
+
+#######################################
+# Using rpart (Decision tree )
+#######################################
+
+# Training the model 
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="rpart-DecisionTree",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+fit <- rpart(label ~ ., data = dr_train[bloc!=k,-c(786)], method = "class"
+                    #,control = rpart.control(minsplit = 1, cp = 0.2)
+                    )
+# Capture end time of the model
+df_execution_time[7,5] <- as.character(Sys.time())
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="rpart-DecisionTree",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+fit_new <- rpart(label ~ ., data = new_dr_train[bloc!=k,-c(2)], method = "class"
+                    #,control = rpart.control(minsplit = 1, cp = 0.2)
+                    )
+# Capture end time of the model
+df_execution_time[8,5] <- as.character(Sys.time())
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="rpart-DecisionTree",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+fit_new2 <- rpart(label ~ ., data = new_dr_train_2d[bloc!=k,-c(2)], method = "class"
+                    #,control = rpart.control(minsplit = 1, cp = 0.2)
+                    )
+# Capture end time of the model
+df_execution_time[9,5] <- as.character(Sys.time())
+
+
+summary(fit)
+summary(fit_new)
+summary(fit_new2)
+
+# Testing the model
+df_execution_time[7,6] <- as.character(Sys.time())
+pred.rpart=predict(fit,(dr_train[bloc==k,-c(1,786)]), type="class")
+df_execution_time[7,7] <- as.character(Sys.time())
+
+df_execution_time[8,6] <- as.character(Sys.time())
+pred.rpart_new=predict(fit_new,(new_dr_train[bloc==k,-c(1,2)]), type="class")
+df_execution_time[8,7] <- as.character(Sys.time())
+
+df_execution_time[9,6] <- as.character(Sys.time())
+pred.rpart_new2=predict(fit_new2,(new_dr_train_2d[bloc==k,-c(1,2)]), type="class")
+df_execution_time[9,7] <- as.character(Sys.time())
+
+
+(head(pred.rpart,n=10))
+#(head(test, n=10))
+plot(fit)
+text(fit)
+
+plot(fit_new)
+text(fit_new)
+
+plot(fit_new2)
+text(fit_new2)
+
+fancyRpartPlot(fit)
+fancyRpartPlot(fit_new)
+fancyRpartPlot(fit_new2)
+
+
+# Cross validation
+
+table(pred.rpart)
+table(pred.rpart_new)
+table(pred.rpart_new2)
+
+newpred.rpart=cbind(id_col, pred.rpart)
+newpred.rpart <-`colnames<-`(newpred.rpart,c("actual","classified"))
+newpred.rpart_new=cbind(id_col, pred.rpart_new)
+newpred.rpart_new <-`colnames<-`(newpred.rpart_new,c("actual","classified"))
+newpred.rpart_new2=cbind(id_col, pred.rpart_new2)
+newpred.rpart_new2 <-`colnames<-`(newpred.rpart_new2,c("actual","classified"))
+
+table(newpred.rpart)
+table(newpred.rpart_new)
+table(newpred.rpart_new2)
+
+confusionMatrix(pred.rpart,id_col$label)
+confusionMatrix(pred.rpart_new,id_col$label)
+confusionMatrix(pred.rpart_new2,id_col$label)
+
+plot_CV(table(newpred.rpart), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.rpart_new), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.rpart_new2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+df_accuracy <- rbind(df_accuracy,cbind(Model="rpart-DecisionTree",CV=k,Transformation="None",accuracy=sum(pred.rpart==id_col$label)/length(id_col$label)))
+df_accuracy <- rbind(df_accuracy,cbind(Model="rpart-DecisionTree",CV=k,Transformation="DCT",accuracy=sum(pred.rpart_new==id_col$label)/length(id_col$label)))
+df_accuracy <- rbind(df_accuracy,cbind(Model="rpart-DecisionTree",CV=k,Transformation="DCT_2D",accuracy=sum(pred.rpart_new2==id_col$label)/length(id_col$label)))
+
+#######################################
+# Using J48 (Decision tree )
+#######################################
+
+# Training the model 
+# Capture start time of the model
+options(java.parameters = "-Xmx2048m")
+options(java.parameters = "-Xmx64g")
+df_execution_time <- rbind(df_execution_time,data.frame(Model="J48-DecisionTree",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+fit2.j48=J48(label~., data =dr_train[bloc!=k,-c(786)], control=Weka_control(U=FALSE, M=10, C=0.1))
+df_execution_time[10,5] <- as.character(Sys.time())
+# e <- evaluate_Weka_classifier(fit2.j48, numFolds = 10, seed = 1, class = TRUE)
+
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="J48-DecisionTree",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+fit2.j48_new=J48(label~., data =new_dr_train[bloc!=k,-c(2)], control=Weka_control(U=FALSE, M=10, C=0.1))
+df_execution_time[11,5] <- as.character(Sys.time())
+# e_new <- evaluate_Weka_classifier(fit2.j48_new, numFolds = 10, seed = 1, class = TRUE)
+
+
+# Capture start time of the model
+df_execution_time <- rbind(df_execution_time,data.frame(Model="J48-DecisionTree",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+fit2.j48_new2=J48(label~., data =new_dr_train_2d[bloc!=k,-c(2)], control=Weka_control(U=FALSE, M=10, C=0.1))
+df_execution_time[12,5] <- as.character(Sys.time())
+# e_new2 <- evaluate_Weka_classifier(fit2.j48_new2, numFolds = 10, seed = 1, class = TRUE)
+
+# Testing the model
+options(java.parameters = "-Xmx2048m")
+options(java.parameters = "-Xmx64g")
+df_execution_time[10,6] <- as.character(Sys.time())
+pred.j48=predict(fit2.j48, newdata = (dr_train[bloc==k,-c(1,786)]), type = c("class"))
+df_execution_time[10,7] <- as.character(Sys.time())
+# InfoGainAttributeEval(label ~ . , data = dr_train[bloc!=k,-c(786)])
+# options(java.parameters = "-Xmx16g")
+(fit2.j48)
+
+
+df_execution_time[11,6] <- as.character(Sys.time())
+pred.j48_new=predict (fit2.j48_new, newdata = (new_dr_train[bloc==k,-c(1,2)]), type = c("class"))
+df_execution_time[11,7] <- as.character(Sys.time())
+# InfoGainAttributeEval(label ~ . , data = new_dr_train[bloc!=k,-c(2)])
+(fit2.j48_new)
+
+df_execution_time[12,6] <- as.character(Sys.time())
+pred.j48_new2=predict (fit2.j48_new2, newdata = (new_dr_train_2d[bloc==k,-c(1,2)]), type = c("class"))
+df_execution_time[12,7] <- as.character(Sys.time())
+# InfoGainAttributeEval(label ~ . , data = new_dr_train_2d[bloc!=k,-c(2)])
+(fit2.j48_new2)
+
+
+# Cross validation
+
+table(pred.j48)
+table(pred.j48_new)
+table(pred.j48_new2)
+
+newpred.j48=cbind(id_col, pred.j48)
+newpred.j48 <-`colnames<-`(newpred.j48,c("actual","classified"))
+newpred.j48_new=cbind(id_col, pred.j48_new)
+newpred.j48_new <-`colnames<-`(newpred.j48_new,c("actual","classified"))
+newpred.j48_new2=cbind(id_col, pred.j48_new2)
+newpred.j48_new2 <-`colnames<-`(newpred.j48_new2,c("actual","classified"))
+
+table(newpred.j48)
+table(newpred.j48_new)
+table(newpred.j48_new2)
+
+confusionMatrix(pred.j48,id_col$label)
+confusionMatrix(pred.j48_new,id_col$label)
+confusionMatrix(pred.j48_new2,id_col$label)
+
+plot_CV(table(newpred.j48), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.j48_new), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.j48_new2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="J48-DecisionTree",CV=k,Transformation="None",accuracy=sum(pred.j48==id_col$label)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="J48-DecisionTree",CV=k,Transformation="DCT",accuracy=sum(pred.j48_new==id_col$label)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="J48-DecisionTree",CV=k,Transformation="DCT_2D",accuracy=sum(pred.j48_new2==id_col$label)/length(id_col$label)))
+
+
+
+#######################################
+# Support Vector Machines (SVMs)
+#######################################
+
+# The cost parameter in the SVM means the tradeoff between misclassification and simplicity of the model
+# The cost parameter decides how much an SVM should be allowed to "bend" with the data. For a low cost, 
+# you aim for a smooth decision surface and for a higher cost, you aim to classify more points correctly. 
+# It is also simply referred to as the cost of misclassification.
+
+##################### Tuning w/ polynomial
+
+# We can "tune" the SVM by altering the cost
+fit.svm <- tune(svm,label~., data=dr_train[bloc!=k,-c(786)],
+                   kernel="polynomial", 
+                   ranges=list(cost=c(.01,.1,1,10,100,100)))
+summary(fit.svm)  ## This shows that the best cost is .02
+
+##################### Using fit.svm in svm.polynomial model (polynomial)
+
+# Model development (polynomial kernal) w/ best cost from fit.svm
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-Polynomial",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.polynomial <- svm(label~., data=dr_train[bloc!=k,-c(786)], kernel="polynomial", cost=.0286, scale=FALSE)
+df_execution_time[7,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-Polynomial",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.polynomial1 <- svm(label~., data=new_dr_train[bloc!=k,-c(2)], kernel="polynomial", cost=.0286, scale=FALSE)
+df_execution_time[8,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-Polynomial",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.polynomial2 <- svm(label~., data=new_dr_train_2d[bloc!=k,-c(2)], kernel="polynomial", cost=.0286, scale=FALSE)
+df_execution_time[9,5] <- as.character(Sys.time())
+print(svm.polynomial) # 5677 support vectors
+# You can see that the number of support vectors is 5677 - they are the points that are close to 
+# the boundary or on the wrong side of the boundary
+
+df_execution_time[7,6] <- as.character(Sys.time())
+(pred.svm.polynomial <- predict(svm.polynomial, (dr_train[bloc==k,-c(1,786)]), type="class"))
+df_execution_time[7,7] <- as.character(Sys.time())
+
+df_execution_time[8,6] <- as.character(Sys.time())
+(pred.svm.polynomial1 <- predict(svm.polynomial1, (new_dr_train[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[8,7] <- as.character(Sys.time())
+
+df_execution_time[9,6] <- as.character(Sys.time())
+(pred.svm.polynomial2 <- predict(svm.polynomial2, (new_dr_train_2d[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[9,7] <- as.character(Sys.time())
+
+newpred.svm.polynomial=cbind(id_col, pred.svm.polynomial)
+newpred.svm.polynomial <-`colnames<-`(newpred.svm.polynomial,c("actual","classified"))
+newpred.svm.polynomial1=cbind(id_col, pred.svm.polynomial1)
+newpred.svm.polynomial1 <-`colnames<-`(newpred.svm.polynomial1,c("actual","classified"))
+newpred.svm.polynomial2=cbind(id_col, pred.svm.polynomial2)
+newpred.svm.polynomial2 <-`colnames<-`(newpred.svm.polynomial2,c("actual","classified"))
+
+confusionMatrix(pred.svm.polynomial, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.polynomial1, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.polynomial2, id_col$label) # 97.98% accuracy
+
+plot_CV(table(newpred.svm.polynomial), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.polynomial1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.polynomial2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <-cbind(Model="SVM-Polynomial",CV=k,Transformation="None",accuracy=sum(newpred.svm.polynomial$actual==newpred.svm.polynomial$classified)/length(id_col$label))
+#df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-Polynomial",CV=k,Transformation="None",accuracy=sum(newpred.svm.polynomial$actual==newpred.svm.polynomial$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-Polynomial",CV=k,Transformation="DCT",accuracy=sum(newpred.svm.polynomial1$actual==newpred.svm.polynomial1$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-Polynomial",CV=k,Transformation="DCT_2D",accuracy=sum(newpred.svm.polynomial2$actual==newpred.svm.polynomial2$classified)/length(id_col$label)))
+
+
+##################### Tuning w/ linear
+
+# We can "tune" the SVM by altering the cost
+
+fit.svm <- tune(svm,label~., data=dr_train[bloc!=k,-c(786)],
+                   kernel="linear", 
+                   ranges=list(cost=c(.01,.1,1,10,100,100)))
+summary(fit.svm)  ## This shows that the best cost is .02
+
+##################### Using fit.svm in svm.linear model (linear)
+
+# Model development (linear kernal) w/ best cost from fit.svm
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-linear",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.linear <- svm(label~., data=dr_train[bloc!=k,-c(786)], kernel="linear", cost=.0286, scale=FALSE)
+df_execution_time[10,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-linear",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.linear1 <- svm(label~., data=new_dr_train[bloc!=k,-c(2)], kernel="linear", cost=.0286, scale=FALSE)
+df_execution_time[11,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-linear",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.linear2 <- svm(label~., data=new_dr_train_2d[bloc!=k,-c(2)], kernel="linear", cost=.0286, scale=FALSE)
+df_execution_time[12,5] <- as.character(Sys.time())
+print(svm.polynomial) # 5677 support vectors
+# You can see that the number of support vectors is 5677 - they are the points that are close to 
+# the boundary or on the wrong side of the boundary
+
+df_execution_time[10,6] <- as.character(Sys.time())
+(pred.svm.linear <- predict(svm.linear, (dr_train[bloc==k,-c(1,786)]), type="class"))
+df_execution_time[10,7] <- as.character(Sys.time())
+
+df_execution_time[11,6] <- as.character(Sys.time())
+(pred.svm.linear1 <- predict(svm.linear1, (new_dr_train[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[11,7] <- as.character(Sys.time())
+
+df_execution_time[12,6] <- as.character(Sys.time())
+(pred.svm.linear2 <- predict(svm.linear2, (new_dr_train_2d[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[12,7] <- as.character(Sys.time())
+
+newpred.svm.linear=cbind(id_col, pred.svm.polynomial)
+newpred.svm.linear <-`colnames<-`(newpred.svm.linear,c("actual","classified"))
+newpred.svm.linear1=cbind(id_col, pred.svm.linear1)
+newpred.svm.linear1 <-`colnames<-`(newpred.svm.linear1,c("actual","classified"))
+newpred.svm.linear2=cbind(id_col, pred.svm.linear2)
+newpred.svm.linear2 <-`colnames<-`(newpred.svm.linear2,c("actual","classified"))
+
+confusionMatrix(pred.svm.linear, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.linear1, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.linear2, id_col$label) # 97.98% accuracy
+
+plot_CV(table(newpred.svm.linear), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.linear1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.linear2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-linear",CV=k,Transformation="None",accuracy=sum(newpred.svm.linear$actual==newpred.svm.linear$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-linear",CV=k,Transformation="DCT",accuracy=sum(newpred.svm.linear1$actual==newpred.svm.linear1$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-linear",CV=k,Transformation="DCT_2D",accuracy=sum(newpred.svm.linear2$actual==newpred.svm.linear2$classified)/length(id_col$label)))
+
+##################### Tuning w/ radial
+
+fit.svm <- tune(svm,label~., data=dr_train[bloc!=k,-c(786)],
+                   kernel="radial", 
+                   ranges=list(cost=c(.01,.1,1,10,100,100)))
+summary(fit.svm)  ## This shows that the best cost is .02
+
+##################### Using fit.svm in svm.radial model (radial)
+
+# Model development (radial kernal) w/ best cost from fit.svm
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-radial",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.radial <- svm(label~., data=dr_train[bloc!=k,-c(786)], kernel="radial", cost=.0286, scale=FALSE)
+df_execution_time[13,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-radial",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.radial1 <- svm(label~., data=new_dr_train[bloc!=k,-c(2)], kernel="radial", cost=.0286, scale=FALSE)
+df_execution_time[14,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-radial",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.radial2 <- svm(label~., data=new_dr_train_2d[bloc!=k,-c(2)], kernel="radial", cost=.0286, scale=FALSE)
+df_execution_time[15,5] <- as.character(Sys.time())
+print(svm.polynomial) # 5677 support vectors
+# You can see that the number of support vectors is 5677 - they are the points that are close to 
+# the boundary or on the wrong side of the boundary
+
+df_execution_time[13,6] <- as.character(Sys.time())
+(pred.svm.radial <- predict(svm.radial, (dr_train[bloc==k,-c(1,786)]), type="class"))
+df_execution_time[13,7] <- as.character(Sys.time())
+
+df_execution_time[14,6] <- as.character(Sys.time())
+(pred.svm.radial1 <- predict(svm.radial1, (new_dr_train[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[14,7] <- as.character(Sys.time())
+
+df_execution_time[15,6] <- as.character(Sys.time())
+(pred.svm.radial2 <- predict(svm.radial2, (new_dr_train_2d[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[15,7] <- as.character(Sys.time())
+
+newpred.svm.radial=cbind(id_col, pred.svm.polynomial)
+newpred.svm.radial <-`colnames<-`(newpred.svm.radial,c("actual","classified"))
+newpred.svm.radial1=cbind(id_col, pred.svm.radial1)
+newpred.svm.radial1 <-`colnames<-`(newpred.svm.radial1,c("actual","classified"))
+newpred.svm.radial2=cbind(id_col, pred.svm.radial2)
+newpred.svm.radial2 <-`colnames<-`(newpred.svm.radial2,c("actual","classified"))
+
+confusionMatrix(pred.svm.radial, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.radial1, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.radial2, id_col$label) # 97.98% accuracy
+
+plot_CV(table(newpred.svm.radial), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.radial1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.radial2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-radial",CV=k,Transformation="None",accuracy=sum(newpred.svm.radial$actual==newpred.svm.radial$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-radial",CV=k,Transformation="DCT",accuracy=sum(newpred.svm.radial1$actual==newpred.svm.radial1$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-radial",CV=k,Transformation="DCT_2D",accuracy=sum(newpred.svm.radial2$actual==newpred.svm.radial2$classified)/length(id_col$label)))
+
+##################### Tuning w/ sigmoid
+
+fit.svm <- tune(svm,label~., data=dr_train[bloc!=k,-c(786)],
+                   kernel="sigmoid", 
+                   ranges=list(cost=c(.01,.1,1,10,100,100)))
+summary(fit.svm)  ## This shows that the best cost is .02
+
+##################### Using fit.svm in svm.sigmoid model (sigmoid)
+
+# Model development (sigmoid kernal) w/ best cost from fit.svm
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-sigmoid",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.sigmoid <- svm(label~., data=dr_train[bloc!=k,-c(786)], kernel="sigmoid", cost=.0286, scale=FALSE)
+df_execution_time[16,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-sigmoid",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.sigmoid1 <- svm(label~., data=new_dr_train[bloc!=k,-c(2)], kernel="sigmoid", cost=.0286, scale=FALSE)
+df_execution_time[17,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-sigmoid",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+svm.sigmoid2 <- svm(label~., data=new_dr_train_2d[bloc!=k,-c(2)], kernel="sigmoid", cost=.0286, scale=FALSE)
+df_execution_time[18,5] <- as.character(Sys.time())
+print(svm.polynomial) # 5677 support vectors
+# You can see that the number of support vectors is 5677 - they are the points that are close to 
+# the boundary or on the wrong side of the boundary
+
+df_execution_time[16,6] <- as.character(Sys.time())
+(pred.svm.sigmoid <- predict(svm.sigmoid, (dr_train[bloc==k,-c(1,786)]), type="class"))
+df_execution_time[16,7] <- as.character(Sys.time())
+
+df_execution_time[17,6] <- as.character(Sys.time())
+(pred.svm.sigmoid1 <- predict(svm.sigmoid1, (new_dr_train[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[17,7] <- as.character(Sys.time())
+
+df_execution_time[18,6] <- as.character(Sys.time())
+(pred.svm.sigmoid2 <- predict(svm.sigmoid2, (new_dr_train_2d[bloc==k,-c(1,2)]), type="class"))
+df_execution_time[18,7] <- as.character(Sys.time())
+
+newpred.svm.sigmoid=cbind(id_col, pred.svm.polynomial)
+newpred.svm.sigmoid <-`colnames<-`(newpred.svm.sigmoid,c("actual","classified"))
+newpred.svm.sigmoid1=cbind(id_col, pred.svm.sigmoid1)
+newpred.svm.sigmoid1 <-`colnames<-`(newpred.svm.sigmoid1,c("actual","classified"))
+newpred.svm.sigmoid2=cbind(id_col, pred.svm.sigmoid2)
+newpred.svm.sigmoid2 <-`colnames<-`(newpred.svm.sigmoid2,c("actual","classified"))
+
+confusionMatrix(pred.svm.sigmoid, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.sigmoid1, id_col$label) # 97.98% accuracy
+confusionMatrix(pred.svm.sigmoid2, id_col$label) # 97.98% accuracy
+
+plot_CV(table(newpred.svm.sigmoid), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.sigmoid1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.svm.sigmoid2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-sigmoid",CV=k,Transformation="None",accuracy=sum(newpred.svm.sigmoid$actual==newpred.svm.sigmoid$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-sigmoid",CV=k,Transformation="DCT",accuracy=sum(newpred.svm.sigmoid1$actual==newpred.svm.sigmoid1$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="SVM-sigmoid",CV=k,Transformation="DCT_2D",accuracy=sum(newpred.svm.sigmoid2$actual==newpred.svm.sigmoid2$classified)/length(id_col$label)))
+
+# df_accuracy <-data.frame(df_accuracy)
+# df_accuracy$accuracy <-as.integer(substr(df_accuracy$accuracy,3,4))
+
+#######################################
+# kNN (k - nearest neighbor) 
+#######################################
+
+# Source: https://www.analyticsvidhya.com/blog/2015/08/learning-concept-knn-algorithms-programming/
+# A large k value has benefits which include reducing the variance due to the noisy data; 
+# the side effect being developing a bias due to which the learner tends to ignore the smaller 
+# patterns which may have useful insights.
+# The value for k is generally chosen as the square root of the number of observations.
+# Square root of 1123 = 33.5 (34)
+
+
+# k=25
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-25",CV=l,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+knn.1<- knn(dr_train[bloc!=l,-c(1,786)], dr_train[bloc==l,-c(1,786)], (dr_train[bloc!=l,1, drop=TRUE]), k=25)
+df_execution_time[19,5] <- as.character(Sys.time())
+confusionMatrix(knn.1, id_col$label) 
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-25",CV=l,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+knn.2<- knn(new_dr_train[bloc!=l,-c(1,2)], new_dr_train[bloc==l,-c(1,2)], (new_dr_train[bloc!=l,1, drop=TRUE]), k=25)
+df_execution_time[20,5] <- as.character(Sys.time())
+confusionMatrix(knn.2, id_col$label) 
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-25",CV=l,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+knn.3<- knn(new_dr_train_2d[bloc!=l,-c(1,2)], new_dr_train_2d[bloc==l,-c(1,2)], (new_dr_train_2d[bloc!=l,1, drop=TRUE]), k=25)
+df_execution_time[21,5] <- as.character(Sys.time())
+confusionMatrix(knn.3, id_col$label) 
+
+newpred.knn.1=cbind(id_col, knn.1)
+newpred.knn.1 <-`colnames<-`(newpred.knn.1,c("actual","classified"))
+newpred.knn.2=cbind(id_col, knn.2)
+newpred.knn.2 <-`colnames<-`(newpred.knn.2,c("actual","classified"))
+newpred.knn.3=cbind(id_col, knn.3)
+newpred.knn.3 <-`colnames<-`(newpred.knn.3,c("actual","classified"))
+
+plot_CV(table(newpred.knn.1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.knn.2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.knn.3), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-25",CV=l,Transformation="None",accuracy=sum(newpred.knn.1$actual==newpred.knn.1$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-25",CV=l,Transformation="DCT",accuracy=sum(newpred.knn.2$actual==newpred.knn.2$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-25",CV=l,Transformation="DCT_2D",accuracy=sum(newpred.knn.3$actual==newpred.knn.3$classified)/length(id_col$label)))
+
+
+# k=35
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-35",CV=l,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+knn.4<- knn(dr_train[bloc!=l,-c(1,786)], dr_train[bloc==l,-c(1,786)], (dr_train[bloc!=l,1, drop=TRUE]), k=35)
+df_execution_time[19,5] <- as.character(Sys.time())
+confusionMatrix(knn.4, id_col$label) 
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-35",CV=l,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+knn.5<- knn(new_dr_train[bloc!=l,-c(1,2)], new_dr_train[bloc==l,-c(1,2)], (new_dr_train[bloc!=l,1, drop=TRUE]), k=35)
+df_execution_time[20,5] <- as.character(Sys.time())
+confusionMatrix(knn.5, id_col$label) 
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-35",CV=l,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+knn.6<- knn(new_dr_train_2d[bloc!=l,-c(1,2)], new_dr_train_2d[bloc==l,-c(1,2)], (new_dr_train_2d[bloc!=l,1, drop=TRUE]), k=35)
+df_execution_time[21,5] <- as.character(Sys.time())
+confusionMatrix(knn.6, id_col$label) 
+
+newpred.knn.4=cbind(id_col, knn.4)
+newpred.knn.4 <-`colnames<-`(newpred.knn.4,c("actual","classified"))
+newpred.knn.5=cbind(id_col, knn.5)
+newpred.knn.5 <-`colnames<-`(newpred.knn.5,c("actual","classified"))
+newpred.knn.6=cbind(id_col, knn.6)
+newpred.knn.6 <-`colnames<-`(newpred.knn.6,c("actual","classified"))
+
+plot_CV(table(newpred.knn.4), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.knn.5), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.knn.6), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-35",CV=k,Transformation="None",accuracy=sum(newpred.knn.4$actual==newpred.knn.4$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-35",CV=k,Transformation="DCT",accuracy=sum(newpred.knn.5$actual==newpred.knn.5$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-35",CV=k,Transformation="DCT_2D",accuracy=sum(newpred.knn.6$actual==newpred.knn.6$classified)/length(id_col$label)))
+
+
+# df_accuracy <-data.frame(df_accuracy)
+# df_accuracy$accuracy <-as.integer(substr(df_accuracy$accuracy,3,4))
+
+
+#######################################
+# Random Forest
+#######################################
+
+# Source: https://www.r-bloggers.com/how-to-implement-random-forests-in-r/
+
+# Create a Random Forest model with default parameters
+# By default, number of trees is 500 and number of variables tried at each split is 2 in this case.
+df_execution_time <- data.frame(Model="RF-Default",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL")
+row.names(df_execution_time) <-NULL
+df_execution_time$end_time<-as.character(df_execution_time$end_time)
+df_execution_time$start_time<-as.character(df_execution_time$start_time)
+df_execution_time$Transformation<-as.character(df_execution_time$Transformation)
+df_execution_time$Model<-as.character(df_execution_time$Model)
+df_execution_time$CV<-as.character(df_execution_time$CV)
+df_execution_time$test_start_time<-as.character(df_execution_time$test_start_time)
+df_execution_time$test_end_time<-as.character(df_execution_time$test_end_time)
+#run the model
+
+rf.1 <- randomForest(label ~ ., data = dr_train[bloc!=k,-c(786)], importance = TRUE)
+df_execution_time[1,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="RF-Default",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+rf.2 <- randomForest(label ~ ., data = new_dr_train[bloc!=k,-c(2)], importance = TRUE)
+df_execution_time[2,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="RF-Default",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+rf.3 <- randomForest(label ~ ., data = new_dr_train_2d[bloc!=k,-c(2)], importance = TRUE)
+df_execution_time[3,5] <- as.character(Sys.time())
+
+rf.1 # error rate = 10.15% 
+importance(rf.1)        
+varImpPlot(rf.1) 
+
+rf.2 # error rate = 10.15% 
+importance(rf.2)        
+varImpPlot(rf.2) 
+
+rf.3 # error rate = 10.15% 
+importance(rf.3)        
+varImpPlot(rf.3) 
+
+df_execution_time[1,6] <- as.character(Sys.time())
+pred.rf.1<- predict(rf.1, dr_train[bloc==k,-c(1,786)])
+df_execution_time[1,7] <- as.character(Sys.time())
+
+df_execution_time[2,6] <- as.character(Sys.time())
+pred.rf.2<- predict(rf.2, new_dr_train[bloc==k,-c(1,2)])
+df_execution_time[2,7] <- as.character(Sys.time())
+
+df_execution_time[3,6] <- as.character(Sys.time())
+pred.rf.3<- predict(rf.3, new_dr_train_2d[bloc==k,-c(1,2)])
+df_execution_time[3,7] <- as.character(Sys.time())
+
+confusionMatrix(pred.rf.1, id_col$label) 
+confusionMatrix(pred.rf.2, id_col$label)
+confusionMatrix(pred.rf.3, id_col$label)
+
+newpred.rf.1=cbind(id_col, pred.rf.1)
+newpred.rf.1 <-`colnames<-`(newpred.rf.1,c("actual","classified"))
+newpred.rf.2=cbind(id_col, pred.rf.2)
+newpred.rf.2 <-`colnames<-`(newpred.rf.2,c("actual","classified"))
+newpred.rf.3=cbind(id_col, pred.rf.3)
+newpred.rf.3 <-`colnames<-`(newpred.rf.3,c("actual","classified"))
+
+plot_CV(table(newpred.rf.1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.rf.2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.rf.3), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-Default",CV=k,Transformation="None",accuracy=sum(newpred.rf.1$actual==newpred.rf.1$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-Default",CV=k,Transformation="DCT",accuracy=sum(newpred.rf.2$actual==newpred.rf.2$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-Default",CV=k,Transformation="DCT_2D",accuracy=sum(newpred.rf.3$actual==newpred.rf.3$classified)/length(id_col$label)))
+
+
+
+# Fine tuning parameters of Random Forest model
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="RF-6",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+rf6.1 <- randomForest(label ~ ., data = dr_train[bloc!=k,-c(786)], ntree = 500, mtry = 6, importance = TRUE)
+df_execution_time[4,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="RF-6",CV=k,Transformation="DCT",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+rf6.2 <- randomForest(label ~ ., data = new_dr_train[bloc!=k,-c(2)], ntree = 500, mtry = 6, importance = TRUE)
+df_execution_time[5,5] <- as.character(Sys.time())
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="RF-6",CV=k,Transformation="DCT_2D",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+rf6.3 <- randomForest(label ~ ., data = new_dr_train_2d[bloc!=k,-c(2)], ntree = 500, mtry = 6, importance = TRUE)
+df_execution_time[6,5] <- as.character(Sys.time())
+
+rf6.1 # error rate = 10.15% 
+importance(rf6.1)        
+varImpPlot(rf6.1) 
+
+rf6.2 # error rate = 10.15% 
+importance(rf6.2)        
+varImpPlot(rf6.2) 
+
+rf6.3 # error rate = 10.15% 
+importance(rf6.3)        
+varImpPlot(rf6.3) 
+
+df_execution_time[4,6] <- as.character(Sys.time())
+pred.rf6.1<- predict(rf6.1, dr_train[bloc==k,-c(1,786)])
+df_execution_time[4,7] <- as.character(Sys.time())
+
+df_execution_time[5,6] <- as.character(Sys.time())
+pred.rf6.2<- predict(rf6.2, new_dr_train[bloc==k,-c(1,2)])
+df_execution_time[5,7] <- as.character(Sys.time())
+
+df_execution_time[6,6] <- as.character(Sys.time())
+pred.rf6.3<- predict(rf6.3, new_dr_train_2d[bloc==k,-c(1,2)])
+df_execution_time[6,7] <- as.character(Sys.time())
+
+confusionMatrix(pred.rf6.1, id_col$label) 
+confusionMatrix(pred.rf6.2, id_col$label)
+confusionMatrix(pred.rf6.3, id_col$label)
+
+newpred.rf6.1=cbind(id_col, pred.rf6.1)
+newpred.rf6.1 <-`colnames<-`(newpred.rf6.1,c("actual","classified"))
+newpred.rf6.2=cbind(id_col, pred.rf6.2)
+newpred.rf6.2 <-`colnames<-`(newpred.rf6.2,c("actual","classified"))
+newpred.rf6.3=cbind(id_col, pred.rf6.3)
+newpred.rf6.3 <-`colnames<-`(newpred.rf6.3,c("actual","classified"))
+
+plot_CV(table(newpred.rf6.1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.rf6.2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+plot_CV(table(newpred.rf6.3), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-6",CV=k,Transformation="None",accuracy=sum(newpred.rf6.1$actual==newpred.rf6.1$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-6",CV=k,Transformation="DCT",accuracy=sum(newpred.rf6.2$actual==newpred.rf6.2$classified)/length(id_col$label)))
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-6",CV=k,Transformation="DCT_2D",accuracy=sum(newpred.rf6.3$actual==newpred.rf6.3$classified)/length(id_col$label)))
+
+
+# Using For loop to identify the right mtry for model
+a=c()
+i=5
+for (i in 3:8) {
+  rf.3 <- randomForest(label ~ ., data = train, ntree = 500, mtry = i, importance = TRUE)
+  predValid <- predict(rf.3, test_nolabel, type = "class")
+  a[i-2] = mean(predValid == test_justlabel)
+}
+
+a
+
+plot(3:8,a)
+
+# From the above graph, we can see that the accuracy decreased when mtry was increased from 5
+# to 6 and then increased when mtry was changed to 7 from 6. Maximum accuracy is at mtry equal to 8.
+
+# Source: https://www.kaggle.com/benhamner/rf-proximity
+
+
+# df_execution_time$start_time <-as.character(df_execution_time$start_time)
+# df_execution_time$end_time <-as.character(df_execution_time$end_time)
+# df_execution_time$test_start_time <-as.character(df_execution_time$test_start_time)
+# df_execution_time$test_end_time <-as.character(df_execution_time$test_end_time)
+
+df_execution_time$start_time <-as.POSIXct(df_execution_time$start_time,format="%Y-%m-%d %H:%M:%S")
+df_execution_time$end_time <-as.POSIXct(df_execution_time$end_time,format="%Y-%m-%d %H:%M:%S")
+df_execution_time$test_start_time <-as.POSIXct(df_execution_time$test_start_time,format="%Y-%m-%d %H:%M:%S")
+df_execution_time$test_end_time <-as.POSIXct(df_execution_time$test_end_time,format="%Y-%m-%d %H:%M:%S")
+
+df_accuracy.p <- df_accuracy[,-c(2)]
+df_execution_time.p <- df_execution_time [,-c(2,6,7)]
+  
+# Accuracy comparison between models
+ggplot(data.frame(df_accuracy), aes(Model, accuracy)) +
+  geom_linerange(
+    aes(x = Model,ymin=0, ymax=accuracy , group = Transformation), 
+    color = "lightgray", size = 1.5,
+    position = position_dodge(0.3)
+    )+
+  geom_point(
+    aes(color = Transformation),
+    position = position_dodge(0.3), size = 3
+    )+
+  scale_color_manual(values = c("#0073C2FF", "#EFC000FF", "#868686FF")) +labs (x="Model",y="Accuracy in Percentage",title = "Accuracy comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+
+# performance comparison for model generation between algorithm
+ggplot(data.frame(df_execution_time), aes(Model, difftime(df_execution_time$end_time, df_execution_time$start_time, units='mins'))) +
+  geom_linerange(
+    aes(x = Model,ymin=0, ymax=difftime(df_execution_time$end_time, df_execution_time$start_time, units='mins') , group = Transformation), 
+    color = "lightgray", size = 1.5,
+    position = position_dodge(0.3)
+    )+
+  geom_point(
+    aes(color = Transformation),
+    position = position_dodge(0.3), size = 3
+    )+
+  scale_color_manual(values = c("#0073C2FF", "#EFC000FF", "#868686FF"))+labs (x="Model",y="Minutes",title = "Time took to build the model") + theme(legend.position = "bottom")
+
+# performance comparison for test generation between algorithm
+ggplot(data.frame(df_execution_time), aes(Model, difftime(df_execution_time$test_end_time, df_execution_time$test_start_time, units='mins'))) +
+  geom_linerange(
+    aes(x = Model,ymin=0, ymax=difftime(df_execution_time$test_end_time, df_execution_time$test_start_time, units='mins') , group = Transformation), 
+    color = "lightgray", size = 1.5,
+    position = position_dodge(0.3)
+    )+
+  geom_point(
+    aes(color = Transformation),
+    position = position_dodge(0.3), size = 3
+    )+
+  scale_color_manual(values = c("#0073C2FF", "#EFC000FF", "#868686FF"))+labs (x="Model",y="Minutes",title = "Time took to test the model") + theme(legend.position = "bottom")
+
+if (k==1) { 
+df_accuracy_all <-df_accuracy
+df_execution_time_all <-df_execution_time
+} else {
+df_accuracy_all <-rbind(df_accuracy_all,df_accuracy)  
+df_execution_time_all <-rbind(df_execution_time_all,df_execution_time)
+}
+
+}
+
+
+# calculate average accuracy for 3 CV result
+df_accuracy_summary <- df_accuracy_all %>%
+  dplyr::group_by(Model, Transformation) %>%
+  dplyr::summarize(mean_accuracy = mean(accuracy)) %>%
+  dplyr::ungroup()
+
+# calculate average time taken for building the model
+df_execution_summary <- df_execution_time_all %>%
+  dplyr::group_by(Model, Transformation) %>%
+  dplyr::summarize(mean_model_time = mean(model_time),mean_test_time= mean(test_time)) %>%
+  dplyr::ungroup()
+
+
+ggplot(data.frame(df_accuracy_summary), aes(Model, mean_accuracy)) +
+  geom_linerange(
+    aes(x = Model,ymin=0, ymax=mean_accuracy , group = Transformation), 
+    color = "lightgray", size = 1.5,
+    position = position_dodge(0.3)
+    )+
+  geom_point(
+    aes(color = Transformation),
+    position = position_dodge(0.3), size = 3
+    )+
+  scale_color_manual(values = c("#0073C2FF", "#EFC000FF", "#868686FF")) +labs (x="Model",y="Accuracy in Percentage",title = "Accuracy comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+# performance comparison for model creation between algorithm
+ggplot(data.frame(df_execution_summary), aes(Model,mean_model_time )) +
+  geom_linerange(
+    aes(x = Model,ymin=0, ymax= mean_model_time, group = Transformation), 
+    color = "lightgray", size = 1.5,
+    position = position_dodge(0.3)
+    )+
+  geom_point(
+    aes(color = Transformation),
+    position = position_dodge(0.3), size = 3
+    )+
+  scale_color_manual(values = c("#0073C2FF", "#EFC000FF", "#868686FF"))+labs (x="Model",y="Minutes",title = "Time took to build the model") + theme(legend.position = "bottom")
+
+
+```
+

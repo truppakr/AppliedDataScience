@@ -1,0 +1,534 @@
+---
+title: "ThulasiRam_RuppaKrishnan_HW2"
+author: "Thulasiram Ruppa Krishnan"
+date: "April 17, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r StoryTeller}
+
+########################################
+## NAME YOUR R Files
+##
+## This file is an introduction to R
+## for SYR.
+## 
+## Week 1
+##
+## It looks at StoryTeller data
+##
+## Practice - 
+##     1) REading in csv
+##     2) Looking at the data frame
+##     3) Libraries
+##     4) Setting a WD
+##     5) installing
+##     6) check for missing values
+##     7) visual EDA part 1
+##     8) Look at data types (str)
+##    
+##     RENAME DATA FILES SO THEY HAVE NO SPECIAL CHAR
+#####################################################
+## DO THIS ONCE
+##install.packages("ggplot2")
+library(ggplot2)
+library(tidyverse)
+library(reshape2)
+library(ggrepel)
+library(scales)
+library(RColorBrewer)
+
+# Clear objects
+rm(list=ls())
+## Set your working director to the path were your code AND datafile is
+setwd("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/week2")
+
+
+## Read in .csv data
+## Reference:C:\Users\rkrishnan\Documents\01 Personal\MS\IST 707\week2
+## https://stat.ethz.ch/R-manual/R-devel/library/utils/html/read.table.html
+## The data file and the R code must be in the SAME folder or you must use a path
+## The name must be identical.
+
+filename="data-storyteller.csv"
+MyStoryData <- read.csv(filename, header = TRUE, na.strings = "NA")
+
+
+## Look at the data as a data frame
+(head(MyStoryData))
+(str(MyStoryData))
+
+## See all the "dots" in the column names?
+## This is not good.
+## Update the column names in MyStoryData...
+
+## fix the data while reading and comment out the above code...
+filename="data-storyteller.csv"
+MyStoryData <- read.csv(filename, header = TRUE, na.strings = "NA",col.names = c("School","Section","VeryAhead","Middling","Behind","MoreBehind","VeryBehind","Completed"))
+
+# Section is not an integer. Changing it to factor
+MyStoryData$Section <- as.factor(MyStoryData$Section)
+
+## Look at the data as a data frame
+(head(MyStoryData))
+
+## Check for missing values
+Total <-sum(is.na(MyStoryData))
+cat("The number of missing values in StoryTeller data is ", Total )
+
+## To clean this data, we can look through the variables and make sure that the data for each variable is in
+## the proper range.
+## The data shows the *number of students* in each category.
+## This value cannot be negative - so 0 is the min. We do not know the max, but we
+## might be suspecious of very large numbers. 
+
+## Let's check each numerical variable to see that it is >= 
+
+for(varname in names(MyStoryData)){
+  ## Only check numeric variables
+  if(sapply(MyStoryData[varname], is.numeric)){
+    cat("\n", varname, " is numeric\n")
+    ## Get median
+    (Themedian <- sapply(MyStoryData[varname],FUN=median))
+    ##print(Themedian)
+    ## check/replace if the values are <=0 
+    MyStoryData[varname] <- replace(MyStoryData[varname], MyStoryData[varname] < 0, Themedian)
+  }
+  
+}
+
+(MyStoryData)
+
+## EXPLORE!
+## For all assignments, explore your data.
+
+## Tables are great!
+(table(MyStoryData$School))
+
+## loops - make all the tables at once
+for(i in 1:ncol(MyStoryData)){
+  print(table(MyStoryData[i]))
+}
+
+(colnames(MyStoryData))
+(head(MyStoryData))
+(MyStoryData)
+
+## WHich variables contain information?
+## Does the Section?
+
+
+## Now - look at each table.
+## First, "School"
+## The table shows us that we have 5 schools. but only 2 of them have much data
+## Why is this important?
+
+## Look at all the other variables.
+## Are there outliers or odd values?
+
+## The structure (types) of the data
+(str(MyStoryData))
+
+## Let's use visual EDA - boxplots and great
+## What does this tell us?
+ggplot(stack(MyStoryData), aes(x = ind, y = values, color=ind)) +
+  geom_boxplot()
+## 
+MyStoryData$School =="A"
+
+JustSchoolA<-subset(MyStoryData, School == "A" )
+(JustSchoolA)
+(str(JustSchoolA))
+
+## Change Section to a factor
+# JustSchoolA$Section<-as.factor(JustSchoolA$Section)
+
+ggplot(JustSchoolA, aes(x = Section, y = Middling, color=Section)) +
+  geom_boxplot()
+
+ggplot(JustSchoolA, aes(x = Section, y = Behind, color=Section)) +
+  geom_boxplot()
+
+
+## Measures - mean, median, sums
+
+library(plyr)
+## do once: install.packages("plyr")
+
+## The following will sum all rows for each "School" and per variable in the data
+## Let's save this new aggregated result as a DF
+SumBySchoolDF <- ddply(MyStoryData, "School", numcolwise(sum))
+(SumBySchoolDF)
+
+
+## Now, I want the total number of students for A - E
+## I want to sum the columns for each row
+## I will start with:
+
+(SumBySchoolDF)
+
+SumBySchoolSectionDF <- MyStoryData
+SumBySchoolSectionDF$SchoolSection <- paste(SumBySchoolSectionDF$School,SumBySchoolSectionDF$Section)
+
+(SumBySchoolSectionDF)
+
+SumOfStudents <- rowSums(SumBySchoolDF[,c("VeryAhead", "Middling", "Behind", 
+                                          "MoreBehind","VeryBehind","Completed")])
+(SumOfStudents)
+
+SumOfSecStudents <- rowSums(SumBySchoolSectionDF[,c("VeryAhead", "Middling", "Behind", 
+                                          "MoreBehind","VeryBehind","Completed")])
+(SumOfSecStudents)
+
+
+StudentsSumPerSchool <- SumBySchoolDF
+TotalPerSchool <- data.frame("School" = StudentsSumPerSchool$School, 
+                             "Total" = SumOfStudents)
+
+(TotalPerSchool)
+
+StudentsSumPerSection <- SumBySchoolSectionDF
+TotalPerSection <- data.frame("SchoolSection" = StudentsSumPerSection$SchoolSection, 
+                             "Total" = SumOfSecStudents)
+
+(TotalPerSection)
+
+
+
+# Merge TotalPerSchool and StudentsSumPerSchool in a new dataset
+StudentsBySchool <- cbind(StudentsSumPerSchool,Total=TotalPerSchool$Total)
+(StudentsBySchool)
+
+StudentsBySection <- cbind(StudentsSumPerSection,Total=TotalPerSection$Total)
+(StudentsBySection)
+
+# Transform and Calculate % to get the numbers under one scale for comparison between schools
+
+StudentsBySchool$Middling_Percent <- round(StudentsBySchool$Middling/StudentsBySchool$Total*100,1)
+StudentsBySchool$Behind_Percent <- round(StudentsBySchool$Behind/StudentsBySchool$Total*100,1)
+StudentsBySchool$MoreBehind_Percent <- round(StudentsBySchool$MoreBehind/StudentsBySchool$Total*100,1)
+StudentsBySchool$VeryBehind_Percent <- round(StudentsBySchool$VeryBehind/StudentsBySchool$Total*100,1)
+StudentsBySchool$Completed_Percent <- round(StudentsBySchool$Completed/StudentsBySchool$Total*100,1)
+
+StudentsBySection$Middling_Percent <- round(StudentsBySection$Middling/StudentsBySection$Total*100,1)
+StudentsBySection$Behind_Percent <- round(StudentsBySection$Behind/StudentsBySection$Total*100,1)
+StudentsBySection$MoreBehind_Percent <- round(StudentsBySection$MoreBehind/StudentsBySection$Total*100,1)
+StudentsBySection$VeryBehind_Percent <- round(StudentsBySection$VeryBehind/StudentsBySection$Total*100,1)
+StudentsBySection$Completed_Percent <- round(StudentsBySection$Completed/StudentsBySection$Total*100,1)
+
+# combine Middling and Completed into one bucket and Behinds are into 2nd bucket to get a sense of % behind % ahead
+
+StudentsBySchool$AllAheads <- StudentsBySchool$Completed+ StudentsBySchool$Middling +StudentsBySchool$VeryAhead
+StudentsBySchool$AllBehinds <- StudentsBySchool$Behind+ StudentsBySchool$MoreBehind +StudentsBySchool$VeryBehind
+StudentsBySchool$AllAheads_Percent <- round(StudentsBySchool$AllAheads/StudentsBySchool$Total*100,1)
+StudentsBySchool$AllBehinds_Percent <- round(StudentsBySchool$AllBehinds/StudentsBySchool$Total*100,1)
+StudentsBySchool$Total_Scaled <- ifelse(round((StudentsBySchool$Total/sum(StudentsBySchool$Total)),1)==0,0.1,round((StudentsBySchool$Total/sum(StudentsBySchool$Total)),1))
+
+(StudentsBySchool)
+
+StudentsBySection$AllAheads <- StudentsBySection$Completed+ StudentsBySection$Middling +StudentsBySection$VeryAhead
+StudentsBySection$AllBehinds <- StudentsBySection$Behind+ StudentsBySection$MoreBehind +StudentsBySection$VeryBehind
+StudentsBySection$AllAheads_Percent <- round(StudentsBySection$AllAheads/StudentsBySection$Total*100,1)
+StudentsBySection$AllBehinds_Percent <- round(StudentsBySection$AllBehinds/StudentsBySection$Total*100,1)
+StudentsBySection <-merge(StudentsBySection,`colnames<-`(StudentsBySchool[,c("School","Total")],c("School","SchoolTotal")) ,by.x = "School",by.y = "School")
+StudentsBySection$Total_Scaled <- ifelse(round((StudentsBySection$Total/StudentsBySection$SchoolTotal),1)==0,0.1,round((StudentsBySection$Total/StudentsBySection$SchoolTotal),1))
+
+
+(StudentsBySection)
+
+# melting StudentsBySchool to convert columns to row format for plotting
+StudentsBySchool_Melted <- melt(StudentsBySchool)
+(StudentsBySchool_Melted)
+
+StudentsBySection_Melted <- melt(StudentsBySection)
+(StudentsBySection_Melted)
+
+# store "AllAheads","AllBehinds" in a dataset to plot
+AheadsBehindsBySchool <- cbind(StudentsBySchool_Melted[which(StudentsBySchool_Melted$variable=="AllAheads"|StudentsBySchool_Melted$variable=="AllBehinds"),],(StudentsBySchool_Melted[which(StudentsBySchool_Melted$variable=="AllAheads_Percent"|StudentsBySchool_Melted$variable=="AllBehinds_Percent"),][3]))
+colnames(AheadsBehindsBySchool)[4] <-"value_percent"
+AheadsBehindsBySchool <- merge(AheadsBehindsBySchool, StudentsBySchool[,c("School","Total")],by.x = "School",by.y = "School")
+AheadsBehindsBySchool$Total <- ifelse(round((AheadsBehindsBySchool$Total/sum(StudentsBySchool$Total)),1)==0,0.1,round((AheadsBehindsBySchool$Total/sum(StudentsBySchool$Total)),1))
+AheadsBehindsBySchool <-AheadsBehindsBySchool[order(AheadsBehindsBySchool$variable),] 
+(AheadsBehindsBySchool)
+
+AheadsBehindsBySection <- cbind(StudentsBySection_Melted[which(StudentsBySection_Melted$variable=="AllAheads"|StudentsBySection_Melted$variable=="AllBehinds"),],(StudentsBySection_Melted[which(StudentsBySection_Melted$variable=="AllAheads_Percent"|StudentsBySection_Melted$variable=="AllBehinds_Percent"),][5]))
+colnames(AheadsBehindsBySection)[6] <-"value_percent"
+AheadsBehindsBySection <- merge(AheadsBehindsBySection, StudentsBySection[,c("SchoolSection","SchoolTotal")],by.x = "SchoolSection",by.y = "SchoolSection")
+#AheadsBehindsBySection$SchoolTotal <- ifelse(round((AheadsBehindsBySection$SchoolTotal/sum(StudentsBySection$SchoolTotal)),1)==0,0.1,round((AheadsBehindsBySection$SchoolTotal/sum(StudentsBySection$SchoolTotal)),1))
+AheadsBehindsBySection <-AheadsBehindsBySection[order(AheadsBehindsBySection$variable),] 
+(AheadsBehindsBySection)
+
+
+# AheadsBehindsBySchool <- data.frame(rbind(
+# cbind(School=as.character(StudentsBySchool$School),Total=as.numeric(ifelse(round((StudentsBySchool$Total/sum(StudentsBySchool$Total)),1)==0,0.1,round((StudentsBySchool$Total/sum(StudentsBySchool$Total)),1))),variable="AllAheads",value=StudentsBySchool$AllAheads,value_percent=StudentsBySchool$AllAheads_Percent),
+#cbind(School=as.character(StudentsBySchool$School),Total=as.numeric(ifelse(round((StudentsBySchool$Total/sum(StudentsBySchool$Total)),1)==0,0.1,round((StudentsBySchool$Total/sum(StudentsBySchool$Total)),1))),variable="AllBehinds",value=StudentsBySchool$AllBehinds,value_percent=StudentsBySchool$AllBehinds_Percent)
+# ))
+
+#AheadsBehindsBySchool$Total <- as.double(AheadsBehindsBySchool$Total)
+#AheadsBehindsBySchool$value <- as.numeric(AheadsBehindsBySchool$value)
+#AheadsBehindsBySchool$value_percent <- as.double(AheadsBehindsBySchool$value_percent)
+
+
+#ggplot(data = StudentsBySchool_Melted[which(StudentsBySchool_Melted$variable==c("AllAheads","AllBehinds","AllAheads_Percent","AllBehinds_Percent" ),], mapping = aes(x = value)) + geom_histogram(bins = 20) + facet_wrap(~variable, scales = 'free_x')
+# Let's just plot AllAheads and AllBehinds between schools and do a comparison 
+
+# Plotting actual number of student and their progress in two broader buckets by School
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySchool,aes(x=School,y=value,fill=factor(variable, levels=c("AllBehinds","AllAheads"))),stat="identity")+
+  labs (x="School",y="# of Students",title = "Ahead and Behind students across school",fill="Progress") + 
+  theme(legend.position = "bottom") + 
+  geom_text(data =AheadsBehindsBySchool,aes(x=School,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+# Plotting actual number of student and their progress in two broader buckets by Section in School A
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="A"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("AllBehinds","AllAheads"))),stat="identity")+
+  labs (x="SchoolSection",y="# of Students",title = "Ahead and Behind students in School A",fill="Progress") + 
+  theme(legend.position = "bottom") + 
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="A"),],aes(x=SchoolSection,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+# Plotting actual number of student and their progress in two broader buckets by Section in School B
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="B"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("AllBehinds","AllAheads"))),stat="identity")+
+  labs (x="SchoolSection",y="# of Students",title = "Ahead and Behind students in School B",fill="Progress") + 
+  theme(legend.position = "bottom") + 
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="B"),],aes(x=SchoolSection,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+# Plotting actual number of student and their progress in two broader buckets by Section in School C
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="C"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("AllBehinds","AllAheads"))),stat="identity")+
+  labs (x="SchoolSection",y="# of Students",title = "Ahead and Behind students in School C",fill="Progress") + 
+  theme(legend.position = "bottom") + 
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="C"),],aes(x=SchoolSection,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+# Plotting actual number of student and their progress in two broader buckets by Section in School D
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="D"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("AllBehinds","AllAheads"))),stat="identity")+
+  labs (x="SchoolSection",y="# of Students",title = "Ahead and Behind students in School D",fill="Progress") + 
+  theme(legend.position = "bottom") + 
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="D"),],aes(x=SchoolSection,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+# Plotting actual number of student and their progress in two broader buckets by Section in School E
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="E"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("AllBehinds","AllAheads"))),stat="identity")+
+  labs (x="SchoolSection",y="# of Students",title = "Ahead and Behind students in School E",fill="Progress") + 
+  theme(legend.position = "bottom") + 
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="E"),],aes(x=SchoolSection,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+
+
+# Plotting % of student and their pregress in two broader buckets By School
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySchool,aes(x=School,y=value_percent,fill=factor(variable, levels=c("AllBehinds","AllAheads"))
+                                            #,width=Total
+                                            ),stat="identity")+
+  labs (x="School",y="% of Students",title = "Ahead and Behind students across school",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() +
+  geom_text(data =AheadsBehindsBySchool,aes(x=School,y=value_percent,label = value_percent), position = position_stack(vjust = 0.5)) 
+
+# Plotting % of student and their pregress in two broader buckets By Section in School A
+
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="A"),],aes(x=SchoolSection,y=value_percent,fill=factor(variable, levels=c("AllBehinds","AllAheads"))
+                                            #,width=Total
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "Ahead and Behind students across Section in School A",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() +
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="A"),],aes(x=SchoolSection,y=value_percent,label = value_percent), position = position_stack(vjust = 0.5)) 
+
+# Plotting % of student and their pregress in two broader buckets By Section in School B
+
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="B"),],aes(x=SchoolSection,y=value_percent,fill=factor(variable, levels=c("AllBehinds","AllAheads"))
+                                                                                         #,width=Total
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "Ahead and Behind students across Section in School B",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() +
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="B"),],aes(x=SchoolSection,y=value_percent,label = value_percent), position = position_stack(vjust = 0.5)) 
+
+# Plotting % of student and their pregress in two broader buckets By Section in School C
+
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="C"),],aes(x=SchoolSection,y=value_percent,fill=factor(variable, levels=c("AllBehinds","AllAheads"))
+                                                                                         #,width=Total
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "Ahead and Behind students across Section in School C",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() +
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="C"),],aes(x=SchoolSection,y=value_percent,label = value_percent), position = position_stack(vjust = 0.5)) 
+
+# Plotting % of student and their pregress in two broader buckets By Section in School D
+
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="D"),],aes(x=SchoolSection,y=value_percent,fill=factor(variable, levels=c("AllBehinds","AllAheads"))
+                                                                                         #,width=Total
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "Ahead and Behind students across Section in School D",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() +
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="D"),],aes(x=SchoolSection,y=value_percent,label = value_percent), position = position_stack(vjust = 0.5)) 
+
+# Plotting % of student and their pregress in two broader buckets By Section in School E
+
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySection[which(AheadsBehindsBySection$School=="E"),],aes(x=SchoolSection,y=value_percent,fill=factor(variable, levels=c("AllBehinds","AllAheads"))
+                                                                                         #,width=Total
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "Ahead and Behind students across Section in School E",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() +
+  geom_text(data =AheadsBehindsBySection[which(AheadsBehindsBySection$School=="E"),],aes(x=SchoolSection,y=value_percent,label = value_percent), position = position_stack(vjust = 0.5)) 
+
+
+
+# Plotting % of student and their pregress in two broader buckets, Adjusting width according to the size of school
+ggplot() + 
+  geom_bar(data = AheadsBehindsBySchool,aes(x=School,y=value_percent,fill=factor(variable, levels=c("AllBehinds","AllAheads"))
+                                            ,width=Total
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "Ahead and Behind students across school",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() +
+  geom_text(data =AheadsBehindsBySchool,aes(x=School,y=value_percent,label = value_percent), position = position_stack(vjust = 0.5)) 
+
+
+# Plot all progress in % by school . Filter the melted data only for percentage
+
+AllProgressbySchool <-StudentsBySchool_Melted[which(StudentsBySchool_Melted$variable=="Middling_Percent"|StudentsBySchool_Melted$variable=="Behind_Percent"|StudentsBySchool_Melted$variable=="MoreBehind_Percent"|StudentsBySchool_Melted$variable=="VeryBehind_Percent"|StudentsBySchool_Melted$variable=="Completed_Percent"),]
+(AllProgressbySchool)
+
+ggplot() + 
+  geom_bar(data = AllProgressbySchool,aes(x=School,y=value,fill=factor(variable, levels=c("Middling_Percent","Behind_Percent","MoreBehind_Percent","VeryBehind_Percent","Completed_Percent"))
+                                           
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "All Progress by school in %",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() 
+  #+ geom_text(data =AllProgressbySchool,aes(x=School,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+# Plot all progress in % by Section . Filter the melted data only for percentage
+
+AllProgressbySection <-StudentsBySection_Melted[which(StudentsBySection_Melted$variable=="Middling_Percent"|StudentsBySection_Melted$variable=="Behind_Percent"|StudentsBySection_Melted$variable=="MoreBehind_Percent"|StudentsBySection_Melted$variable=="VeryBehind_Percent"|StudentsBySection_Melted$variable=="Completed_Percent"),]
+(AllProgressbySection)
+
+# Plot all progress in % by Section in School A
+
+ggplot() + 
+  geom_bar(data = AllProgressbySection[which(AllProgressbySection$School=="A"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("Middling_Percent","Behind_Percent","MoreBehind_Percent","VeryBehind_Percent","Completed_Percent"))
+                                          
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "All Progress by Section in School A (%)",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() 
+#+ geom_text(data =AllProgressbySchool,aes(x=School,y=value,label = value), position = position_stack(vjust = 0.5)) 
+
+# Plot all progress in % by Section in School B
+
+ggplot() + 
+  geom_bar(data = AllProgressbySection[which(AllProgressbySection$School=="B"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("Middling_Percent","Behind_Percent","MoreBehind_Percent","VeryBehind_Percent","Completed_Percent"))
+                                                                                     
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "All Progress by Section in School B (%)",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() 
+# Plot all progress in % by Section in School C
+
+ggplot() + 
+  geom_bar(data = AllProgressbySection[which(AllProgressbySection$School=="C"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("Middling_Percent","Behind_Percent","MoreBehind_Percent","VeryBehind_Percent","Completed_Percent"))
+                                                                                     
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "All Progress by Section in School C (%)",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() 
+# Plot all progress in % by Section in School D
+
+ggplot() + 
+  geom_bar(data = AllProgressbySection[which(AllProgressbySection$School=="D"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("Middling_Percent","Behind_Percent","MoreBehind_Percent","VeryBehind_Percent","Completed_Percent"))
+                                                                                     
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "All Progress by Section in School D (%)",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() 
+# Plot all progress in % by Section in School E
+
+ggplot() + 
+  geom_bar(data = AllProgressbySection[which(AllProgressbySection$School=="E"),],aes(x=SchoolSection,y=value,fill=factor(variable, levels=c("Middling_Percent","Behind_Percent","MoreBehind_Percent","VeryBehind_Percent","Completed_Percent"))
+                                                                                     
+  ),stat="identity")+
+  labs (x="School",y="% of Students",title = "All Progress by Section in School E (%)",fill="Progress" ) + 
+  theme(legend.position = "bottom") + 
+  coord_flip() 
+
+
+# Plot all school by progress . Filter the melted data only for percentage
+
+# trying to place value in the stacked bar and not able to make it working
+# AllProgressbySchool$value/sum(AllProgressbySchool[which(AllProgressbySchool$variable==AllProgressbySchool$variable),"value"])
+#table(AllProgressbySchool$variable)
+
+ggplot(data = AllProgressbySchool,aes(x=variable,y=value,fill=factor(School, levels=c("A","B","C","D","E"))
+                                      )) + 
+  geom_bar(stat="identity",position = "fill")+
+  labs (y="School",x="% of Students",title = "All school  by progress in %",fill="School" ) + 
+  theme(legend.position = "bottom")  +
+  coord_flip() 
+
+# +  geom_text(aes(label = value,y=rescale(value, to = c(0, 1), from = range(value, na.rm = TRUE, finite = TRUE))/4), size = 3, hjust = 0.5, vjust = 3, position =     "stack")
+
+# Plot all Section in School A by progress 
+
+# Barplot using RColorBrewer
+# barplot(c(1:12), col=brewer.pal(12,"Paired"))
+# barplot(c(1:30),col=c(brewer.pal(12,"Paired"),brewer.pal(9,"Pastel1"),brewer.pal(9,"Set1")))
+
+ggplot(data = AllProgressbySection[which(AllProgressbySection$School=="A"),],aes(x=variable,y=value,fill=factor(Section, levels=c(1:13))
+)) + 
+  geom_bar(stat="identity",position = "fill" )+
+  labs (y="School",x="% of Students",title = "All Section in School A by progress (%)",fill="School" ) + 
+  theme(legend.position = "bottom")  +
+  coord_flip() + scale_fill_manual(values=c(brewer.pal(12,"Paired"),"#7D7D7D"))
+
+# Plot all Section in School B by progress 
+
+ggplot(data = AllProgressbySection[which(AllProgressbySection$School=="B"),],aes(x=variable,y=value,fill=factor(Section, levels=c(1:12))
+)) + 
+  geom_bar(stat="identity",position = "fill" )+
+  labs (y="School",x="% of Students",title = "All Section in School B by progress (%)",fill="School" ) + 
+  theme(legend.position = "bottom")  +
+  coord_flip() + scale_fill_manual(values=c(brewer.pal(12,"Paired")))
+
+# Plot all Section in School C by progress 
+
+ggplot(data = AllProgressbySection[which(AllProgressbySection$School=="C"),],aes(x=variable,y=value,fill=factor(Section, levels=c(1:12))
+)) + 
+  geom_bar(stat="identity",position = "fill" )+
+  labs (y="School",x="% of Students",title = "All Section in School C by progress (%)",fill="School" ) + 
+  theme(legend.position = "bottom")  +
+  coord_flip() + scale_fill_manual(values=c(brewer.pal(3,"Paired")))
+
+
+# Plot all Section in School by progress 
+# Generating 30 distinct colors to represent
+n <- 30
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+pie(rep(1,n), col=sample(col_vector, n))
+
+ggplot(data = AllProgressbySection,aes(x=variable,y=value,fill=factor(SchoolSection, levels=unique(c(AllProgressbySection$SchoolSection)))
+)) + 
+  geom_bar(stat="identity",position = "fill" )+
+  labs (y="School",x="% of Students",title = "All Section in Schools by progress (%)",fill="School" ) + 
+  theme(legend.position = "bottom")  +
+  coord_flip() + 
+  #scale_fill_manual(values=c(brewer.pal(12,"Paired"),brewer.pal(9,"Pastel1"),brewer.pal(9,"Set1")))
+  scale_fill_manual(values=sample(col_vector, n))
+```
+
