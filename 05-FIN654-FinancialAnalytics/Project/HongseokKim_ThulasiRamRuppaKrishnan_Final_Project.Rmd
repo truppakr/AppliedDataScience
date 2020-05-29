@@ -1,0 +1,1164 @@
+---
+title: "FinalProject"
+#author: "Hongseok Kim & Thulasiram Ruppa Krishnan"
+date: "August 2, 2019"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Context
+==============================================
+
+column{.tabset}
+------------------------------------------------------
+
+### The business situation
+
+Coffee business is growing in US and also gaining momentum internationally.
+As a company, we would like to expand the business inside USA and in Europe to generate more revenue and acquire international markets.
+Now the revenue will be generated both in USD and Euros and hence a strategic planning is required to manage money in both the markets.
+A better understanding is required on exchange price and its impact from volatility.
+Determine the fluctuations of raw materials cost , correlation of weather and other markets like tea industries which could impact the supply and demand.
+Also, Manage coffee beans import effectively from variety of sources 
+
+The company allocates \$10 million to manage receivables. The company wants us to:
+
+The company wants to mitigate their risk by diversifying their export/import loads. This risk measures the amount of capital the company needs to maintain its portfolio of services.
+
+
+***Key questions***
+
+Your CFO has a few questions for us:
+
+1. How volatile the coffee business , given the daily market price of coffee bean? What is the nature of coffee returns? We want to reflect the ups      and downs of price movements, something of prime interest to management. First, we calculate percentage changes as log returns. Our interest is      in the ups and downs. To look at that we use `if` and `else` statements to define a new column called `direction`. We will build a data frame to     house this analysis.
+
+2. How can we show the differences in the shape of ups and downs in coffee market, especially given our tolerance for risk? We can use the coffee.df        data frame with ggplot2 and the cumulative relative frequency function stat_ecdf to begin to understand this data.
+
+3.	How this expansion of the new business will impact the revenue and profits?
+
+
+4.	Is there a correlation between tea and coffee market?
+
+
+5.	How would we manage the allocation of existing resources given we have just landed in this new market?
+
+
+6.  What is the nature of exchange rates in general and in particular for this data set? We want to reflect the ups and downs of rate movements,         known   to managers as currency appreciation and depreciation.
+
+7.  How much capital we would need? Determine various measures of risk in the tail of distribution. Determine the risk capital we might need. 
+
+8. Develop a model to optimize the holdings of each of the three money markets. 
+
+ 
+9. Run scenarios to understand the range of the tangency portfolio (risky asset) as input to the collateral decision given a risk tolerance and a loss threshold.
+
+    **The risk tolerence and the loss threshold are given as follows**
+    
+    **Loss Threshold : -12%**
+    **Risk Tolerence : 5%**
+    
+    **Loss should not exceed 12% no more than 5% of the time**
+
+
+10. Including tangency portfolio, amount of cash and equivalents in the portfolio allocation, minimum risk portfolio and the risk and return characteristics of each commodity. In the interpretation, relate these results to the resource allocation decision and consequences for entering the the new market.
+
+
+
+Key Q & A
+=========================
+
+### **Key business questions**
+
+1. How volatile the coffee business , given the daily market price of coffee bean? What is the nature of coffee returns? We want to reflect the ups      and downs of price movements, something of prime interest to management. First, we calculate percentage changes as log returns. Our interest is      in the ups and downs. To look at that we use `if` and `else` statements to define a new column called `direction`. We will build a data frame to     house this analysis.
+
+    **Figure 1.1 exhibits that the coffee Returns are more volatile in nature and often shows volatiality clustering. Also, there are peak negative      returns occured in 1991 and in 2000 which are all time peak returns. This suggests that high negative returns are likely to occur than the           postitive returns.**
+    
+    **As shown in the above table, zero value for the median indicates that both postive and negative returns occur equal number of times (i.e) the      probability of negative return is 0.5. Mean value of all the returns is nearly zero shows that our net returns is zero with o profit gain in         the market. Skewness of 6.979 is due to the more mass in the left tail and the kurtosis of 38 is huge showing that the tail is very thick.**
+
+    **Heavy-tailed distributions (distribution with high kurtosis) are important models in finance, because equity returns and other changes in          market prices usually have heavy tails. In finance applications, one is especially concerned when the return distribution has heavy tails because     of the possibility of an extremely large negative return, which could, for example, entirely deplete the capital reserves of a firm.**
+
+2. How can we show the differences in the shape of ups and downs in coffee market, especially given our tolerance for risk? We can use the coffee.df        data frame with ggplot2 and the cumulative relative frequency function stat_ecdf to begin to understand this data.
+
+    **The Figure 1.4 shows, that the span of negative curve is long ranging from 0 to -8 whereas the span of positive curve is short ranging from 0      to 5. The tolerance rate for this curve is 3.19 , anything below this value is ok but anything above 3.19 is not tolerable**
+
+3.	How this expansion of the new business will impact the revenue and profits?
+
+    **The performance of these commodities will have huge an impact on size and timing of currency transactions overseas because of the stylized         facts of money markets. It is important to schedule these transactions after studying the ups and downs in the market to gain maximum benefits in     return**
+
+4.	Is there a correlation between tea and coffee market?
+
+    **Figure 3.1 shows that coffee and Tea markets are highly correlation and the changes in one market affect the other market even with lag of 15      days.**
+
+
+5.	How would we manage the allocation of existing resources given we have just landed in this new market?
+
+    **In the new market we need to satisfy the demands and customer needs quickly to gain the positive feedback from the new customers and hence most     of the resource will be allocated to focus and satisfy new customer demands.We might face resource shortage in meeting current customer              demands.**
+
+6.  What is the nature of exchange rates in general and in particular for this data set? We want to reflect the ups and downs of rate movements,         known   to managers as currency appreciation and depreciation.
+
+    **Figure 2.1 on "exchange rate percent changes" for different money market shows that they are extremely volatile in nature with volatility          clustering. You can see that the following extreme volatilities occurred in each of the money market. Volatilities and correlation behavior of       one market with other changes by year and it is not consistent from one year to another**
+
+7.  How much capital we would need? Determine various measures of risk in the tail of distribution. Determine the risk capital we might need. 
+
+    **Expected shortfall is $13.46 M VaR is $10.2 M The coffee company already had $10 M for managing receivebales and needs and additional $3.46 M as a risk capital to handle extreme events**
+
+
+8. Develop a model to optimize the holdings of each of the three currencies. 
+
+     **Tangency portfolio is charted shown in figure 6.1 to find the optimum return per risk using sharpes ratio for the three money market combination**
+
+9. Run scenarios to understand the range of the tangency portfolio (risky asset) as input to the collateral decision given a risk tolerance and a loss threshold.
+
+    **The risk tolerence and the loss threshold are given as follows**
+    
+    **Loss Threshold : -12%**
+    **Risk Tolerence : 5%**
+    
+    **Loss should not exceed 12% no more than 5% of the time**
+
+
+10. Including tangency portfolio, amount of cash and equivalents in the portfolio allocation, minimum risk portfolio and the risk and return characteristics of each money market. In the interpretation, relate these results to the resource allocation decision and consequences for entering the the new market.
+
+    **Maixumum Tangeny portfolio allocation **
+    
+    **The portfolio allocation for optimised return and the weights of different  markets are given below**
+    
+    **EUR : 0.54128**
+    **CAD : -0.02129**
+    **CHF : 0.48001**
+    
+    **Given the above weights, we are taking long position on EUR and short position on CAD. **
+    
+    **Minimum Tangeny portfolio allocation**
+    
+    **The portfolio allocation for 0 % risk and the weights of different markets are given below**
+    
+    **EUR : 0.4153**
+    **Nickel : 0.2037**
+    **Aluminium : 0.3810**
+
+
+
+Data exploration on Commodities
+=============================
+
+Column {data-width=350}
+-----------------------
+### **Descriptive Stats : Commodity - Coffee **
+
+
+```{r}
+rm(list = ls())
+options(digits = 4, scipen = 999999)
+library(flexdashboard)
+library(shiny)
+library(psych)
+library(ggplot2)
+library(GGally)
+library(lubridate)
+library(dplyr)
+library(quantreg)
+library(forecast)
+library(tidyquant)
+library(timetk)
+library(quantmod)
+library(matrixStats)
+library(QRM)
+library(quadprog)
+library(plotly)
+
+data_moments <- function(data){
+  library(moments)
+  mean.r <- mean(data)
+  sd.r <- sd(data)
+  median.r <- median(data)
+  skewness.r <- skewness(data)
+  kurtosis.r <- kurtosis(data)
+  result <- data.frame(mean = mean.r, std_dev = sd.r, median = median.r, skewness = skewness.r, kurtosis = kurtosis.r)
+  return(result)
+}
+
+options(digits = 5)
+# setwd("C:\\Users\\rkrishnan\\Documents\\01 Personal\\MS\\FIN654\\Project")
+coffee_currency <- read.csv("data/coffee&currency.csv", header = T, stringsAsFactors = F)
+coffee_currency <- na.omit(coffee_currency[,1:7])
+
+# Construct expanded data frame
+return.c <- as.numeric(diff(log(coffee_currency$KC1))) * 100 # Euler 
+size.c <- as.numeric(abs(return.c)) # size is indicator of volatility
+direction.c <- ifelse(return.c > 0, "up", ifelse(return.c < 0, "down", "same")) # another indicator of volatility
+# =if(return > 0, "up", if(return < 0, "down", "same"))
+date.c <- as.Date(coffee_currency$Date[-1], "%m/%d/%Y") # length of DATE is length of return +1: omit 1st observation
+price.c <- as.numeric(coffee_currency$KC1[-1]) # length of DHOILNYH is length of return +1: omit first observation
+coffee.df <- na.omit(data.frame(date = date.c, price = price.c, return = return.c, size = size.c, direction = direction.c)) # clean up data frame by omitting NAs
+str(coffee.df)
+summary(coffee.df)
+
+# Run data_moments()
+answer.c <- data_moments(coffee.df$return)
+# Build pretty table
+answer.c <- round(answer.c, 4)
+#knitr::kable(answer.c)
+
+
+
+# Counting
+# table(coffee.df$return < 0) # one way
+# table(coffee.df$return > 0)
+# table(coffee.df$direction) # this counts 0 returns as negative
+# table(coffee.df$return == 0)
+# Pivoting
+library(dplyr)
+## 1: filter to those houses with fairly high prices
+# pivot.table <-  filter(HO2.df, size > 0.5*max(size))
+## 2: set up data frame for by-group processing
+pivot.table <-  group_by(coffee.df, direction)
+## 3: calculate the summary metrics
+options(dplyr.width = Inf) ## to display all columns
+coffee.count <- length(coffee.df$return)
+pivot.table <-  summarise(pivot.table, return.avg = round(mean(return), 4), return.sd = round(sd(return), 4), quantile.5 = round(quantile(return, 0.05), 4), quantile.95 = round(quantile(return, 0.95), 4), percent = round((length(return)/coffee.count)*100, 2))
+# Build visual
+# knitr::kable(pivot.table, digits = 2)
+
+options(digits = 5)
+# setwd("C:\\Users\\rkrishnan\\Documents\\01 Personal\\MS\\FIN654\\Project")
+# wrco <- read.csv("data/WRCO index.csv", header = T, stringsAsFactors = F)
+# wrco <- na.omit(wrco[,1:3])
+# # stringsAsFactors sets dates as character type
+# wrco <- na.omit(wrco) ## to clean up any missing data
+# # Construct expanded data frame
+# coffee <- read.csv("coffee&currency.csv", header = T, stringsAsFactors = F)
+# coffee <- na.omit(coffee[,c(2,3,7)])
+
+wrco <- read.csv("data/PTEAUSDM.csv", header = T, stringsAsFactors = F)
+# wrco <- na.omit(wrco[,1:3])
+# stringsAsFactors sets dates as character type
+wrco <- na.omit(wrco) ## to clean up any missing data
+# Construct expanded data frame
+coffee <- read.csv("data/PCOFFROBUSDM.csv", header = T, stringsAsFactors = F)
+
+# PAGE: Exploratory Analysis
+
+prices.c <- merge(coffee,wrco,by.x="DATE",by.y="DATE")
+# prices <- prices[,c(1,2,3,5)]
+data.c <- prices.c
+# Compute log differences percent using as.matrix to force numeric type
+data.r.c <- diff(log(as.matrix(prices.c[, -1]))) * 100
+# Create size and direction
+size.c <- na.omit(abs(data.r.c)) # size is indicator of volatility
+#head(size)
+colnames(size.c) <- paste(colnames(size.c),".size", sep = "") # Teetor
+direction.c <- ifelse(data.r.c > 0, 1, ifelse(data.r.c < 0, -1, 0)) # another indicator of volatility
+colnames(direction.c) <- paste(colnames(direction.c),".dir", sep = "")
+# Convert into a time series object: 
+# 1. Split into date and rates
+dates.c <- as.Date(data.c$DATE[-1], "%Y-%m-%d")
+dates.chr.c <- as.character(data.c$DATE[-1])
+#str(dates.chr)
+values.c <- cbind(data.r.c, size.c, direction.c)
+values.c <- na.omit(values.c)
+# for dplyr pivoting and ggplot2 need a data frame also known as "tidy data"
+data.df.c <- data.frame(dates = dates.c, returns = data.r.c, size = size.c, direction = direction.c)
+data.df.nd.c <- data.frame(dates = dates.chr.c, returns = data.r.c, size = size.c, direction = direction.c, stringsAsFactors = FALSE) 
+#non-coerced dates for subsetting on non-date columns
+# 2. Make an xts object with row names equal to the dates
+data.xts.c <- na.omit(as.xts(values.c, dates.c)) #order.by=as.Date(dates, "%d/%m/%Y")))
+#str(data.xts)
+data.zr.c <- as.zooreg(data.xts.c)
+returns.c <- data.xts.c # watch for this data below!
+
+# PAGE: Market risk 
+corr_rolling <- function(x) {	
+  dim <- ncol(x)	
+  corr_r <- cor(x)[lower.tri(diag(dim), diag = FALSE)]	
+  return(corr_r)	
+}
+vol_rolling <- function(x){
+  library(matrixStats)
+  vol_r <- colSds(x)
+  return(vol_r)
+}
+ALL.r.c <- data.xts.c[, 1:2]
+window <- 90 #reactive({input$window})
+corr_r.c <- rollapply(ALL.r.c, width = window, corr_rolling, align = "right", by.column = FALSE)
+colnames(corr_r.c) <- c("Coffee.tea")
+vol_r.c <- rollapply(ALL.r.c, width = window, vol_rolling, align = "right", by.column = FALSE)
+colnames(vol_r.c) <- c("coffee.vol", "tea.vol")
+year.c <- format(index(corr_r.c), "%Y")
+r_corr_vol.c <- merge(ALL.r.c, corr_r.c, vol_r.c, year.c)
+##
+# Load the data_moments() function
+## data_moments function
+## INPUTS: r vector
+## OUTPUTS: list of scalars (mean, sd, median, skewness, kurtosis)
+data_moments <- function(data){
+  library(moments)
+  library(matrixStats)
+  mean.r <- colMeans(data)
+  median.r <- colMedians(data)
+  sd.r <- colSds(data)
+  IQR.r <- colIQRs(data)
+  skewness.r <- skewness(data)
+  kurtosis.r <- kurtosis(data)
+  result <- data.frame(mean = mean.r, median = median.r, std_dev = sd.r, IQR = IQR.r, skewness = skewness.r, kurtosis = kurtosis.r)
+  return(result)
+}
+# Run data_moments()
+answer.c <- data_moments(data.xts.c[, 1:2])
+# Build pretty table
+answer.c <- round(answer.c, 4)
+knitr::kable(answer.c)
+
+
+coffee_movement <- function(file ="data/PCOFFROBUSDM.csv", caption = "Coffee"){
+  options(digits = 5)
+  # setwd("C:\\Users\\rkrishnan\\Documents\\01 Personal\\MS\\FIN654\\Project")
+  # Read file and deposit into variable
+  coffee <- read.csv(file, header = T, stringsAsFactors = F)
+  coffee <- na.omit(coffee[,1:2])
+  # stringsAsFactors sets dates as character type
+  coffee <- na.omit(coffee) ## to clean up any missing data
+  # Construct expanded data frame
+  return <- as.numeric(diff(log(coffee[,2]))) * 100
+  size <- as.numeric(abs(return)) # size is indicator of volatility
+  direction <- ifelse(return > 0, "up", ifelse(return < 0, "down", "same")) # another indicator of volatility
+  date <- as.Date(coffee[-1,1], "%Y-%m-%d") # length of DATE is length of return +1: omit 1st observation
+  price <- as.numeric(coffee[-1,2]) # length of DHOILNYH is length of return +1: omit first observation
+  coffee.df <- na.omit(data.frame(date = date, price = price, return = return, size = size, direction = direction)) # clean up data frame by omitting NAs
+  require(dplyr)
+  ## 1: filter if necessary
+  # pivot.table <-  filter(HO2.df, size > 0.5*max(size))
+  ## 2: set up data frame for by-group processing
+  pivot.table <-  group_by(coffee.df, direction)
+  ## 3: calculate the summary metrics
+  options(dplyr.width = Inf) ## to display all columns
+  coffee.count <- length(coffee.df$return)
+  pivot.table <-  summarise(pivot.table, return.avg = mean(return), return.sd = sd(return), quantile.5 = quantile(return, 0.05), quantile.95 = quantile(return, 0.95), percent = (length(return)/coffee.count)*100)
+  # Construct transpose of pivot table with xtable()
+  # require(xtable)
+  # pivot.xtable <- xtable(t(pivot.table), digits = 2, caption = caption, align=rep("r", 4), table.placement="V")
+  # HO2.caption <- "Heating Oil No. 2: 1986-2016"
+  # output.list <- list(table = pivot.table, xtable = pivot.xtable, df = HO2.df)
+  output.list <- list(table = pivot.table, df = coffee.df)
+return(output.list)
+}
+print("Coffee Movements")
+knitr::kable(coffee_movement(file = "data/PCOFFROBUSDM.csv")$table, digits = 5)
+print("Tea Movements")
+knitr::kable(coffee_movement(file = "data/PTEAUSDM.csv")$table, digits = 5)
+
+library(MASS)
+coffee.data <- coffee_movement(file = "data/PCOFFROBUSDM.csv")$df
+str(coffee.data)
+fit.gamma.up <- fitdistr(coffee.data[coffee.data$direction == "up", "return"], "gamma", hessian = TRUE)
+fit.gamma.up
+# fit.t.same <- fitdistr(HO2.data[HO2.data$direction == "same", "return"], "gamma", hessian = TRUE) # a problem here is all observations = 0
+fit.t.down <- fitdistr(coffee.data[coffee.data$direction == "down", "return"], "t", hessian = TRUE)
+fit.t.down
+fit.gamma.down <- fitdistr(-coffee.data[coffee.data$direction == "down", "return"], "gamma", hessian = TRUE) # gamma distribution defined for data >= 0
+fit.gamma.down
+
+
+```
+
+
+
+Column {data-width=350}
+-----------------------
+
+### **Figure 1.1: Stylized Facts - Return**
+
+```{r}
+library(ggplot2)
+p <- ggplot(coffee.df, aes(x = date.c, y = return.c, group = 1)) + geom_line(colour = "blue")
+#p
+ggplotly(p) #if you like
+```
+
+### **Figure 1.2: Stylized Facts - Size**
+
+```{r}
+# library(ggplot2)
+p <- ggplot(coffee.df, aes(x = date, y = size, group = 1)) + geom_bar(stat = "identity", colour = "green")
+ggplotly(p) #if you like
+```
+
+### **Figure 1.3: Stylized Facts - Return and Size**
+```{r}
+p <- ggplot(coffee.df, aes(date, size)) + geom_bar(stat = "identity", colour = "darkorange") + geom_line(data = coffee.df, aes(date, return), colour = "blue")
+ggplotly(p) #if you like
+```
+
+Column {data-width=350}
+-----------------------
+
+### **Figure 1.4: Coffee Tolerable Rate**
+
+```{r}
+
+coffee.tol.pct <- 0.95
+coffee.tol <- quantile(coffee.df$return, coffee.tol.pct)
+coffee.tol.label <- paste("Tolerable Rate = ", round(coffee.tol, 2), sep = "")
+ggplot(coffee.df, aes(return, fill = direction)) + stat_ecdf(colour = "blue", size = 0.75) + geom_vline(xintercept = coffee.tol, colour = "red", size = 1.5) + annotate("text", x = coffee.tol+1 , y = 0.75, label = coffee.tol.label, colour = "darkred")
+
+```
+
+Data exploration On Currencies
+==============================
+
+Column {data-width=350}
+-----------------------
+
+### **Descriptive Statistics : Currencies **
+
+```{r}
+# Read in data
+library(zoo)
+library(xts)
+library(ggplot2)
+# Read and review a csv file from FRED
+ exrates <- coffee_currency[,c(2,4,5,6)]
+# exrates <- na.omit(read.csv("data/exrates.csv", header = TRUE))
+# Check the data
+ exrates$Date <- as.factor(exrates$Date)
+head(exrates)
+tail(exrates)
+str(exrates)
+# Begin to explore the data
+summary(exrates)
+
+# Compute log differences percent using as.matrix to force numeric type
+exrates.r <- diff(log(as.matrix(exrates[, -1]))) * 100
+# head(exrates.r)
+# tail(exrates.r)
+# str(exrates.r)
+# Create size and direction
+size <- na.omit(abs(exrates.r)) # size is indicator of volatility
+# head(size)
+# colnames(size) <- paste(colnames(size),".size", sep = "") # Teetor
+direction <- ifelse(exrates.r > 0, 1, ifelse(exrates.r < 0, -1, 0)) # another indicator of volatility
+# colnames(direction) <- paste(colnames(direction),".dir", sep = "")
+# head(direction)
+# Convert into a time series object: 
+# 1. Split into date and rates
+dates <- as.Date(exrates$Date[-1], "%m/%d/%Y")
+values <- cbind(exrates.r, size, direction)
+# for dplyr pivoting we need a data frame
+exrates.df <- data.frame(dates = dates, returns = exrates.r, size = size, direction = direction)
+str(exrates.df) # notice the returns.* and direction.* prefixes
+# 2. Make an xts object with row names equal to the dates
+exrates.xts <- na.omit(as.xts(values, dates)) #order.by=as.Date(dates, "%d/%m/%Y")))
+# str(exrates.xts)
+exrates.zr <- na.omit(as.zooreg(exrates.xts))
+str(exrates.zr)
+head(exrates.xts)
+```
+
+
+Column {data-width=350}
+-----------------------
+
+### **Figure 2.1:Exchange Rate Percent Changes**
+```{r}
+library(ggplot2)
+library(plotly)
+title.chg <- "Exchange Rate Percent Changes"
+p1 <- autoplot.zoo(exrates.xts[,1:3]) + ggtitle(title.chg) + ylim(-5, 5)
+p2 <- autoplot.zoo(exrates.xts[,4:6]) + ggtitle(title.chg) + ylim(-5, 5)
+ggplotly(p1)
+```
+
+Column {data-width=350}
+-----------------------
+
+### **Figure 2.2:Tolerable Rate**
+
+```{r }
+exrates.tol.pct <- 0.95
+exrates.tol <- quantile(exrates.df$returns.EUR, exrates.tol.pct)
+exrates.tol.label <- paste("Tolerable Rate = ", round(exrates.tol, 2), "%", sep = "")
+p <- ggplot(exrates.df, aes(returns.EUR, fill = direction.EUR)) + stat_ecdf(colour = "blue", size = 0.75, geom = "point") + geom_vline(xintercept = exrates.tol, colour = "red", size = 1.5) + annotate("text", x = exrates.tol + 0.5 , y = 0.75, label = exrates.tol.label, colour = "darkred")
+ggplotly(p)
+```
+
+Market relationships : Commodities
+===============================
+
+Column {data-width=500}
+-----------------------
+
+### **Figure 3.1: Correlation Analysis - Coffee and Tea Markets**
+
+```{r}
+title.chg <- "Coffee and Tea Market Percent Changes"
+autoplot.zoo(data.xts.c[,1:2]) + ggtitle(title.chg) + ylim(-5, 5)
+autoplot.zoo(data.xts.c[,3:4]) + ggtitle(title.chg) + ylim(-5, 5)
+acf(coredata(data.xts.c[,1:2])) # returns
+acf(coredata(data.xts.c[,3:4])) # sizes
+#pacf here
+one <- ts(data.df.c$returns.PCOFFROBUSDM)
+two <- ts(data.df.c$returns.PTEAUSDM)
+# or
+one <- ts(data.zr.c[,1])
+two <- ts(data.zr.c[,2])
+title.chg <- "Coffee vs. Tea"
+ccf(one, two, main = title.chg, lag.max = 20, xlab = "", ylab = "", ci.col = "red")
+
+# build function to repeat these routines
+run_ccf <- function(one, two, main = title.chg, lag = 20, color = "red"){
+  # one and two are equal length series
+  # main is title
+  # lag is number of lags in cross-correlation
+  # color is color of dashed confidence interval bounds
+  stopifnot(length(one) == length(two))
+  one <- ts(one)
+  two <- ts(two)
+  main <- main
+  lag <- lag
+  color <- color
+  ccf(one, two, main = main, lag.max = lag, xlab = "", ylab = "", ci.col = color)
+  #end run_ccf
+}
+title <- "coffee-tea"
+run_ccf(one, two, main = title, lag = 20, color = "red")
+# now for volatility (sizes)
+one <- abs(data.zr.c[,1])
+two <- abs(data.zr.c[,2])
+title <- "Coffee-Tea: volatility"
+run_ccf(one, two, main = title, lag = 20, color = "red")
+```
+
+Column {data-width=500}
+-----------------------
+
+### **Figure 3.2: Correlation Analysis - Quantile Regression**
+
+```{r}
+
+library(quantreg)
+taus <- seq(.05,.95,.05)	# Roger Koenker UI Bob Hogg and Allen Craig
+fit.rq.Coffee.tea <- rq(log(Coffee.tea) ~ log(coffee.vol), tau = taus, data = r_corr_vol.c)	
+fit.lm.Coffee.tea <- lm(log(Coffee.tea) ~ log(coffee.vol), data = r_corr_vol.c)	
+# Some test statements	
+c.t.summary <- summary(fit.rq.Coffee.tea, se = "boot")
+plot(c.t.summary)
+```
+
+
+Market relationships : Currencies
+===============================
+
+Column {data-width=500}
+-----------------------
+
+### **Figure 4.1: Correlation Analysis between currencies**
+
+```{r}
+acf(coredata(exrates.xts[ , 1:3])) # returns
+acf(coredata(exrates.xts[ , 4:6])) # sizes
+pacf(coredata(exrates.xts[ , 1:3])) # returns
+pacf(coredata(exrates.xts[ , 4:6])) # sizes
+# Load the data_moments() function
+## data_moments function
+## INPUTS: r vector
+## OUTPUTS: list of scalars (mean, sd, median, skewness, kurtosis)
+data_moments <- function(data){
+  library(moments)
+  library(matrixStats)
+  mean.r <- colMeans(data)
+  median.r <- colMedians(data)
+  sd.r <- colSds(data)
+  IQR.r <- colIQRs(data)
+  skewness.r <- skewness(data)
+  kurtosis.r <- kurtosis(data)
+  result <- data.frame(mean = mean.r, median = median.r, std_dev = sd.r, IQR = IQR.r, skewness = skewness.r, kurtosis = kurtosis.r)
+  return(result)
+}
+# Run data_moments()
+answer <- data_moments(exrates.xts[, 4:6])
+# Build pretty table
+answer <- round(answer, 3)
+knitr::kable(answer)
+mean(exrates.xts[,3])
+```
+
+```{r}
+one <- ts(exrates.df$returns.EUR)
+two <- ts(exrates.df$returns.CHF)
+# or
+one <- ts(exrates.zr[,1])
+two <- ts(exrates.zr[,2])
+ccf(abs(one), abs(two), main = "CHF vs. EUR", lag.max = 20, xlab = "", ylab = "", ci.col = "red")
+# build function to repeat these routines
+run_ccf <- function(one, two, main = "one vs. two", lag = 20, color = "red"){
+  # one and two are equal length series
+  # main is title
+  # lag is number of lags in cross-correlation
+  # color is color of dashed confidence interval bounds
+  stopifnot(length(one) == length(two))
+  one <- ts(one)
+  two <- ts(two)
+  main <- main
+  lag <- lag
+  color <- color
+  ccf(one, two, main = main, lag.max = lag, xlab = "", ylab = "", ci.col = color)
+  #end run_ccf
+}
+one <- ts(exrates.df$returns.EUR)
+two <- ts(exrates.df$returns.CHF)
+# or
+one <- exrates.zr[,1]
+two <- exrates.zr[,2]
+title <- "EUR vs. GBP"
+run_ccf(abs(one), abs(two), main = title, lag = 20, color = "red")
+# now for volatility (sizes)
+one <- ts(abs(exrates.zr[,1]))
+two <- ts(abs(exrates.zr[,2]))
+title <- "EUR vs. CHF: volatility"
+run_ccf(one, two, main = title, lag = 20, color = "red")
+# We see some small raw correlations across time with raw returns. More revealing, we see volatility of correlation clustering using return sizes. 
+```
+
+```{r}
+corr_rolling <- function(x) {	
+  dim <- ncol(x)	
+  corr_r <- cor(x)[lower.tri(diag(dim), diag = FALSE)]	
+  return(corr_r)	
+}
+vol_rolling <- function(x){
+  library(matrixStats)
+  vol_r <- colSds(x)
+  return(vol_r)
+}
+ALL.r <- exrates.xts[, 1:3]
+window <- 90 #reactive({input$window})
+corr_r <- rollapply(ALL.r, width = window, corr_rolling, align = "right", by.column = FALSE)
+colnames(corr_r) <- c("EUR.CAD", "EUR.CHF", "CAD.CHF")
+vol_r <- rollapply(ALL.r, width = window, vol_rolling, align = "right", by.column = FALSE)
+colnames(vol_r) <- c("EUR.vol", "CAD.vol", "CHF.vol")
+year <- format(index(corr_r), "%Y")
+r_corr_vol <- merge(ALL.r, corr_r, vol_r, year)
+```
+
+### **Figure 4.2: Quantile Regression**
+
+```{r}
+library(quantreg)
+taus <- seq(.05,.95, .05)	# Roger Koenker UIC Bob Hogg and Allen Craig
+fit.rq.CAD.CHF <- rq(log(CAD.CHF) ~ log(CHF.vol), tau = taus, data = r_corr_vol)	
+fit.lm.CAD.CHF <- lm(log(CAD.CHF) ~ log(CHF.vol), data = r_corr_vol)	
+# Some test statements	
+CAD.CHF.summary <- summary(fit.rq.CAD.CHF, se = "boot")
+#CAD.CHF.summary
+plot(CAD.CHF.summary)
+#
+```
+
+Column {data-width=500}
+-----------------------
+
+### **Figure 4.3: Year over Year Volatilities**
+
+```{r}
+library(quantreg)
+library(magick)
+img <- image_graph(res = 96)
+datalist <- split(r_corr_vol, r_corr_vol$year)
+out <- lapply(datalist, function(data){
+  p <- ggplot(data, aes(CHF.vol, CAD.CHF)) +
+    geom_point() + 
+    ggtitle(data$year) + 
+    geom_quantile(quantiles = c(0.05, 0.95)) + 
+    geom_quantile(quantiles = 0.5, linetype = "longdash") +
+    geom_density_2d(colour = "red")  
+  print(p)
+})
+while (!is.null(dev.list()))  dev.off()
+#img <- image_background(image_trim(img), 'white')
+animation <- image_animate(img, fps = 1)
+animation	
+```
+
+### **Figure 4.4: Correlations behind and after**
+
+```{r}
+library(dplyr)
+x <- as.numeric(exrates.df$returns.CAD) # USD.EUR
+y <- as.numeric(exrates.df$returns.CHF) # USD.GBP
+xy.df <- na.omit(data.frame(date = dates, ahead_x= lead(x, 5), behind_y = lag(y, 5)))
+yx.df <- na.omit(data.frame(date = dates, ahead_y =lead(y, 5), behind_x = lag(x, 5)))
+answer <- data_moments(na.omit(as.matrix(xy.df[,2:3])))
+answer <- round(answer, 4)
+knitr::kable(answer)
+answer <- data_moments(na.omit(as.matrix(yx.df[,2:3])))
+answer <- round(answer, 4)
+knitr::kable(answer)
+cor(as.numeric(xy.df$ahead_x), as.numeric(xy.df$behind_y))
+cor(as.numeric(yx.df$ahead_y), as.numeric(yx.df$behind_x))
+```
+
+
+Market risk of loss
+=============================
+
+Column {data-width=350}
+-----------------------
+
+### **Figure 5.1: Expected Shortfall and Value at Risk**
+
+```{r}
+#mean(data.xts[,4])
+##
+returns1 <- returns.c[,1]
+colnames(returns1) <- "Returns" #kluge to coerce column name for df
+returns1.df <- data.frame(Returns = returns1[,1], Distribution = rep("Historical", each = length(returns1)))
+  
+alpha <- 0.95 # reactive({ifelse(input$alpha.q>1,0.99,ifelse(input$alpha.q<0,0.001,input$alpha.q))})
+  
+# Value at Risk
+VaR.hist <- quantile(returns1,alpha)
+VaR.text <- paste("Value at Risk =", round(VaR.hist, 2))
+  
+# Determine the max y value of the desity plot.
+# This will be used to place the text above the plot
+VaR.y <- max(density(returns1.df$Returns)$y)
+  
+# Expected Shortfall
+ES.hist <- median(returns1[returns1 > VaR.hist])
+ES.text <- paste("Expected Shortfall =", round(ES.hist, 2))
+  
+p <- ggplot(returns1.df, aes(x = Returns, fill = Distribution)) + geom_density(alpha = 0.5) + 
+    geom_vline(aes(xintercept = VaR.hist), linetype = "dashed", size = 1, color = "firebrick1") + 
+    geom_vline(aes(xintercept = ES.hist), size = 1, color = "firebrick1") +
+    annotate("text", x = 2+ VaR.hist, y = VaR.y*1.05, label = VaR.text) +
+    annotate("text", x = 1.5+ ES.hist, y = VaR.y*1.1, label = ES.text) + scale_fill_manual( values = "dodgerblue4")
+ggplotly(p)
+
+```
+
+Column {data-width=350}
+-----------------------
+
+### **Figure 5.2: Loss Analysis - Histogram**
+
+```{r}
+
+# Do the same for returns 2 aand 3
+##
+## Now for Loss Analysis
+# Get last prices
+price.last <- as.numeric(head(data.c[, -1], n=1))
+# Specify the positions
+position.rf <- c(1, 1, 1)
+# And compute the position weights
+w <- position.rf * price.last
+# Fan these  the length and breadth of the risk factor series
+weights.rf <- matrix(w, nrow=nrow(data.r.c), ncol=ncol(data.r.c), byrow=TRUE)
+#head(rowSums((exp(data.r/100)-1)*weights.rf), n=3)
+## We need to compute exp(x) - 1 for very small x: expm1 accomplishes this
+#head(rowSums((exp(data.r/100)-1)*weights.rf), n=4)
+loss.rf <- -rowSums(expm1(data.r.c/100) * weights.rf)
+loss.rf.df <- data.frame(Loss = loss.rf, Distribution = rep("Historical", each = length(loss.rf)))
+## Simple Value at Risk and Expected Shortfall
+alpha.tolerance <- .95
+VaR.hist <- quantile(loss.rf, probs=alpha.tolerance, names=FALSE)
+## Just as simple Expected shortfall
+ES.hist <- median(loss.rf[loss.rf > VaR.hist])
+VaR.text <- paste("Value at Risk =\n", round(VaR.hist, 2)) # ="VaR"&c12
+ES.text <- paste("Expected Shortfall \n=", round(ES.hist, 2))
+title.text <- paste(round(alpha.tolerance*100, 0), "% Loss Limits")
+# using histogram bars instead of the smooth density
+p <- ggplot(loss.rf.df, aes(x = Loss, fill = Distribution)) + geom_histogram(alpha = 0.8) + geom_vline(aes(xintercept = VaR.hist), linetype = "dashed", size = 1, color = "blue") + geom_vline(aes(xintercept = ES.hist), size = 1, color = "blue") + annotate("text", x = 40, y = 40, label = VaR.text) + annotate("text", x = 40, y = 20, label = ES.text) + xlim(0, 500) + ggtitle(title.text)
+ggplotly(p)
+
+
+```
+
+Column {data-width=350}
+-----------------------
+
+### **Figure 5.3: Mean excess plot to determine thresholds for extreme event management**
+
+```{r}
+# mean excess plot to determine thresholds for extreme event management
+data <- as.vector(loss.rf) # data is purely numeric
+umin <-  min(data)         # threshold u min
+umax <-  max(data) - 0.1   # threshold u max
+nint <- 100                # grid length to generate mean excess plot
+grid.0 <- numeric(nint)    # grid store
+e <- grid.0                # store mean exceedances e
+upper <- grid.0            # store upper confidence interval
+lower <- grid.0            # store lower confidence interval
+u <- seq(umin, umax, length = nint) # threshold u grid
+alpha <- 0.95                  # confidence level
+for (i in 1:nint) {
+    data <- data[data > u[i]]  # subset data above thresholds
+    e[i] <- mean(data - u[i])  # calculate mean excess of threshold
+    sdev <- sqrt(var(data))    # standard deviation
+    n <- length(data)          # sample size of subsetted data above thresholds
+    upper[i] <- e[i] + (qnorm((1 + alpha)/2) * sdev)/sqrt(n) # upper confidence interval
+    lower[i] <- e[i] - (qnorm((1 + alpha)/2) * sdev)/sqrt(n) # lower confidence interval
+  }
+mep.df <- data.frame(threshold = u, threshold.exceedances = e, lower = lower, upper = upper)
+loss.excess <- loss.rf[loss.rf > u]
+# Voila the plot => you may need to tweak these limits!
+plt <- ggplot(mep.df, aes( x= threshold, y = threshold.exceedances)) + geom_line() + geom_line(aes(x = threshold, y = lower), colour = "red") + geom_line(aes(x = threshold,  y = upper), colour = "red") + annotate("text", x = 50, y = 125, label = "upper 95%") + annotate("text", x = 50, y = 0, label = "lower 5%")
+ggplotly(plt)
+```
+
+
+Portfolio Analytics on Currencies
+=============================
+
+
+Column {data-width=249}
+-----------------------
+
+### **Figure 6.1: Tangency Portfolio**
+
+```{r}
+options(digits = 4, scipen = 999999)
+library(flexdashboard)
+library(shiny)
+library(psych)
+library(ggplot2)
+library(GGally)
+library(lubridate)
+library(dplyr)
+library(quantreg)
+library(forecast)
+library(tidyquant)
+library(timetk)
+library(quantmod)
+library(matrixStats)
+library(QRM)
+library(quadprog)
+
+# merge by date (as row name)
+price <- exrates.xts[,1:3] %>% as_tibble() %>% mutate(date = index(exrates.xts[,1:3]), month = month.abb[month(index(exrates.xts[,1:3]))])
+return <- exrates.xts[,1:3]
+# calculute within month correlations and choose lower triangle of correlation matrix
+r_corr <- apply.monthly(return, FUN = cor)[, c(2, 3, 6)]
+colnames(r_corr) <- c("EUR", "CAD", "CHF")
+# calculate within month standard deviations using MatrixStats
+r_vols <- apply.monthly(return, FUN = colSds)
+# long format ("TIDY") price tibble for possible other work
+price_tbl <- price %>% as_tibble() %>% gather(k = symbol, value = price, EUR, CAD, CHF )  %>% dplyr::select(symbol, date, price)
+return_tbl <- price_tbl %>% group_by(symbol) %>% tq_transmute(mutate_fun = periodReturn, period = "daily", type = "log", col_rename = "daily_return") %>% mutate(abs_return = abs(daily_return))
+#str(return_tbl)
+# 
+corr_tbl <- r_corr %>% as_tibble() %>% mutate(date = index(r_corr)) %>% gather(key = assets, value = corr, -date)
+vols_tbl <- r_vols %>% as_tibble() %>% mutate(date = index(r_vols)) %>% gather(key = assets, value = vols, -date) 
+#
+corr_vols <- merge(r_corr, r_vols)
+corr_vols_tbl <- corr_vols %>% as_tibble() %>% mutate(date = index(corr_vols))
+#
+n <-  10000 # lots of trials, each a "day" or an "hour"
+z <- rt(n, df = 30)
+garch_sim_t <- function(n = 1000, df = 30, omega = 0.1, alpha = 0.8, phi = 0.05, mu = 0.01){
+  n <- n # lots of trials, each a "day" or an "hour"
+  # set.seed(seed)
+  z <- rt(n, df = df) 
+  e <-  z # store variates
+  y <-  z # returns: store again in a different place
+  sig2 <-  z^2 # create volatility series
+  omega <-  omega #base variance
+  alpha <-  alpha #vols Markov dependence on previous variance
+  phi <-  phi # returns Markov dependence on previous period
+  mu <-  mu # average return
+  for (t in 2:n) { # Because of lag start at second
+    e[t] <- sqrt(sig2[t])*z[t]           # 1. e is conditional on sig
+    y[t] <-  mu + phi*(y[t-1]-mu) + e[t] # 2. generate returns
+    sig2[t+1] <-  omega + alpha * e[t]^2 # 3. generate new sigma^2
+    }
+  return <- list(
+    sim_df_vbl <- data_frame(t = 1:n, z = z, y = y, e = e, sig = sqrt(sig2)[-(n+1)] ),
+    sim_df_title <- data_frame(t = 1:n, "1. Unconditional innovations" = z, "4. Conditional returns" = y, "3. Conditional innovations" = e, "2. Conditional volatility" = sqrt(sig2)[-(n+1)] )
+  )
+}
+#
+price_etf <- price  %>% dplyr::select(EUR, CAD, CHF) # 3 risk factors (rf)
+price_0 <- as.numeric(tail(price_etf, 1))
+shares <- c(60000, 75000, 50000)
+price_last <- price[length(price$EUR), 1:3] #(TAN, ICLN, PBW) %>% as.vector()
+w <- as.numeric(shares * price_last)
+return_hist <- na.omit(apply((price[, 1:3]), 2, diff))
+# Fan these across the length and breadth of the risk factor series
+weights_rf <- matrix(w, nrow=nrow(return_hist), ncol=ncol(return_hist), byrow=TRUE)
+## We need to compute exp(x) - 1 for very small x: expm1 accomplishes this
+loss_rf <- -rowSums(expm1(return_hist) * weights_rf)
+loss_df <- data_frame(loss = loss_rf, distribution = rep("historical", each = length(loss_rf)))
+#
+ES_calc <- function(data, prob){
+  threshold <- quantile(data, prob)
+  result <- mean(data[data > threshold])
+}
+
+#
+n_sim <- 1000
+n_sample <- 100
+prob <- 0.95
+ES_sim <- replicate(n_sim, ES_calc(sample(loss_rf, n_sample, replace = TRUE), prob))
+#
+#summary(ES_sim)
+#
+# mean excess plot to determine thresholds for extreme event management
+data <- as.vector(loss_rf) # data is purely numeric
+umin <-  min(data)         # threshold u min
+umax <-  max(data) - 0.1   # threshold u max
+nint <- 100                # grid length to generate mean excess plot
+grid_0 <- numeric(nint)    # grid store
+e <- grid_0                # store mean exceedances e
+upper <- grid_0            # store upper confidence interval
+lower <- grid_0            # store lower confidence interval
+u <- seq(umin, umax, length = nint) # threshold u grid
+alpha <- 0.95                  # confidence level
+for (i in 1:nint) {
+    data <- data[data > u[i]]  # subset data above thresholds
+    e[i] <- mean(data - u[i])  # calculate mean excess of threshold
+    sdev <- sqrt(var(data))    # standard deviation
+    n <- length(data)          # sample size of subsetted data above thresholds
+    upper[i] <- e[i] + (qnorm((1 + alpha)/2) * sdev)/sqrt(n) # upper confidence interval
+    lower[i] <- e[i] - (qnorm((1 + alpha)/2) * sdev)/sqrt(n) # lower confidence interval
+  }
+mep_df <- data.frame(threshold = u, threshold_exceedances = e, lower = lower, upper = upper)
+loss_excess <- loss_rf[loss_rf > u] - u
+quantInv <- function(distr, value) ecdf(distr)(value)
+u_prob <- quantInv(loss_rf, 200000)
+ES_mep <- mean(loss_rf[loss_rf > quantile(loss_rf, u_prob)])
+##
+#
+data_moments <- function(data){
+  library(moments)
+  library(matrixStats)
+  mean <- colMeans(data)
+  median <- colMedians(data)
+  sd <- colSds(data)
+  IQR <- colIQRs(data)
+  skewness <- skewness(data)
+  kurtosis <- kurtosis(data)
+  result <- data.frame(mean = mean, median = median, std_dev = sd, IQR = IQR, skewness = skewness, kurtosis = kurtosis)
+  return(result)
+}
+#
+##
+# Portfolio Analytics
+##
+#
+contract <- 1 # billion
+working <- 0.100 # billion
+sigma_wc <- 0.025 # billion
+sigma <- 0.25
+threshold <- -0.12 # percentage return
+alpha <- 0.05 # tolerance
+risky <- 0.1 # percentage return on the risky asset
+riskless <- 0.02 # time value of cash -- no risk
+z_star <- qnorm(alpha)
+w <- (threshold-riskless) / (risky - riskless + sigma*z_star)
+#
+# 2 risky assets and a risk-free asset
+# per annum returns from line 148 above
+# watch out for na!
+return <- na.omit(return)
+port_stats <- data_moments(return)
+port_stats
+rho_all <- cor(return)
+# choose quantile scenario
+# uprob <- 0.50
+mu_1 <- abs(port_stats[1, 1] * 252)  #EUR
+mu_2 <- abs(port_stats[3, 1] * 252)  #CHF
+sig_1 <- port_stats[1, 3] * sqrt(252)
+sig_2 <- port_stats[3, 3] * sqrt(252)
+rho <- rho_all[3, 1]
+r_f <-  0.03
+w <-  seq(0, 2, len = 500) # we might need to adjust 5 downward
+means <-  mu_2 + (mu_1 - mu_2) * w
+var <-  sig_1^2 * w^2 + sig_2^2 * (1 - w)^2 +2*w*(1-w)*rho*sig_1*sig_2
+risk <-  sqrt(var)
+# plotting
+sigma_mu_df <- data_frame(sigma_P = risk, mu_P = means )
+names_R <- c("JJC", "JJU")
+mean_R <- c(mu_1, mu_2)
+sd_R <- c(sig_1, sig_2)
+mu_P <- sigma_mu_df$mu_P
+sigma_P <- sigma_mu_df$sigma_P
+r_free <-  r_f ## input value of risk-free interest rate
+# sharpe ratio and minimum variance portfolio analysis
+sharpe <- (mu_P - r_free)/sigma_P ## compute Sharpe's ratios
+ind_max <-  (sharpe == max(sharpe)) ## Find maximum Sharpe's ratio
+ind_min <-  (sigma_P == min(sigma_P)) ## find the minimum variance portfolio
+ind_eff <-  (mu_P > mu_P[ind_min]) ## finally the efficient frontier
+col_P <- ifelse(mu_P > mu_P[ind_min], "blue", "grey") # discriminate efficient and inefficient portfolios
+sigma_mu_df$col_P <- col_P
+# plot
+p <- ggplot(sigma_mu_df, aes(x = sigma_P, y = mu_P, group = 1)) + geom_line(aes(colour=col_P, group = col_P)) + scale_colour_identity() # + xlim(0, max(sd_R*1.1))  + ylim(0, max(mean_R)*1.1) + 
+p <- p + geom_point(aes(x = 0, y = r_free), colour = "red")
+options(digits=4)
+p <- p + geom_abline(intercept = r_free, slope = (mu_P[ind_max]-r_free)/sigma_P[ind_max], colour = "red")
+p <- p + geom_point(aes(x = sigma_P[ind_max], y = mu_P[ind_max])) 
+p <- p + geom_point(aes(x = sigma_P[ind_min], y = mu_P[ind_min])) ## show min var portfolio
+p <- p + annotate("text", x = sd_R[1], y = mean_R[1], label = names_R[1]) + annotate("text", x = sd_R[2], y = mean_R[2], label = names_R[2]) 
+p <- p + ylim(-.05, 0.15)
+#p
+#ggplotly(p) #if you like
+
+#
+# Many assets now
+#
+#R <-  (dat[2:n, -1]/dat[1:(n-1), -1] - 1) # or
+#R <-  log(dat[2:n, -1]/dat[1:(n-1), -1])
+R <-  na.omit(return) # daily returns from line 148?
+n <- dim(R)[1]
+N <- dim(R)[2]
+R_boot <-  R[sample(1:n, 252),] # sample returns and lightning does not strike twice
+r_free <- 0.03 / 252 # daily
+mean_vect <-  apply(R_boot,2,mean)
+cov_mat <-  cov(R_boot)
+sd_vect <-  sqrt(diag(cov_mat))
+A_mat <-  cbind(rep(1,N),mean_vect) 
+mu_P <-  seq(-.01,.01,length=300)                              
+sigma_P <-  mu_P 
+weights <-  matrix(0,nrow=300,ncol=N) 
+for (i in 1:length(mu_P))  
+  {
+    b_vec <-  c(1,mu_P[i])  
+    result <-  
+      solve.QP(Dmat=2*cov_mat,dvec=rep(0,N),Amat=A_mat,bvec=b_vec,meq=2)
+    sigma_P[i] <-  sqrt(result$value)
+    weights[i,] <-  result$solution
+} 
+# make a data frame of the mean and standard deviation results
+sigma_mu_df <- data_frame(sigma_P = sigma_P, mu_P = mu_P)
+names_R <- c("Cu", "Ni", "Al")
+# sharpe ratio and minimum variance portfolio analysis
+sharpe <- (mu_P - r_free)/sigma_P ## compute Sharpe's ratios
+ind_max <-  (sharpe == max(sharpe)) ## Find maximum Sharpe's ratio
+ind_min <-  (sigma_P == min(sigma_P)) ## find the minimum variance portfolio
+ind_eff <-  (mu_P > mu_P[ind_min]) ## finally the efficient fr(aes(x = 0, y = r_free), colour = "red")ontier
+col_P <- ifelse(mu_P > mu_P[ind_min], "blue", "grey") # discriminate efficient and inefficient portfolios
+sigma_mu_df$col_P <- col_P
+# plot it up
+p <- ggplot(sigma_mu_df, aes(x = sigma_P, y = mu_P, group = 1))
+p <- p + geom_line(aes(colour=col_P, group = col_P), size = 1.05) + scale_colour_identity() 
+p <- p + geom_abline(intercept = r_free, slope = (mu_P[ind_max]-r_free)/sigma_P[ind_max], color = "red", size = 1.05)
+p <- p + geom_point(aes(x = sigma_P[ind_max], y = mu_P[ind_max]), color = "green", size = 4) 
+p <- p + geom_point(aes(x = sigma_P[ind_min], y = mu_P[ind_min]), color = "red", size = 4) ## show min var portfolio
+#p
+ggplotly(p)
+
+```
+
+Column {data-width=350}
+-----------------------
+### **Figure 6.2: Tangency portfolio sampled mean simulation**
+```{r}
+
+
+#
+# helper function to support bootstrapping of tangency portfolio mean and sd
+#
+port_sample <- function(return, n_sample = 252, stat = "mean")
+{
+  R <-  return # daily returns
+  n <- dim(R)[1]
+  N <- dim(R)[2]
+  R_boot <-  R[sample(1:n, n_sample, replace = TRUE),] # sample returns
+  r_free <- 0.03 / 252 # daily
+  mean_vect <-  apply(R_boot,2,mean)
+  cov_mat <-  cov(R_boot)
+  sd_vect <-  sqrt(diag(cov_mat))
+  A_mat <-  cbind(rep(1,N),mean_vect) 
+  mu_P <-  seq(-.01,.01,length=300)                              
+  sigma_P <-  mu_P 
+  weights <-  matrix(0,nrow=300,ncol=N) 
+  for (i in 1:length(mu_P))  
+  {
+    b_vec <-  c(1,mu_P[i])  
+    result <-  
+      solve.QP(Dmat=2*cov_mat,dvec=rep(0,N),Amat=A_mat,bvec=b_vec,meq=2)
+    sigma_P[i] <-  sqrt(result$value)
+    weights[i,] <-  result$solution
+  }
+  sharpe <- (mu_P - r_free)/sigma_P ## compute Sharpe's ratios
+  ind_max <-  (sharpe == max(sharpe)) ## Find maximum Sharpe's ratio
+  ind_min <-  (sigma_P == min(sigma_P)) ## find the minimum variance portfolio
+  ind_eff <-  (mu_P > mu_P[ind_min]) ## finally the efficient fr(aes(x = 0, y = r_free), colour = "red")ontier
+  result <- switch(stat,
+    "mean"  = mu_P[ind_max],
+    "sd"    = sigma_P[ind_max]
+    )
+  return(result)
+}
+#
+# try this sampling where 252 is a year of business days typically
+#
+port_mean <- replicate(1000, port_sample(return, n_sample = 252, stat = "mean"))
+sim <- port_mean * 252
+low <- quantile(sim, 0.025)
+high <- quantile(sim, 0.975)
+sim_df <- data_frame(sim = sim)
+title <- "Tangency portfolio sampled mean simulation"
+p <- ggplot(data = sim_df, aes(x = sim))
+p <- p + geom_histogram(bins = 50, alpha = 0.7)
+p <- p + ggtitle(title)
+p <- p + geom_vline(xintercept = low, color = "red", size = 1.5 ) + geom_vline(xintercept = high, color = "red", size = 1.5)
+p <- p + annotate("text", x = low + 0.1, y = 0.005, label = paste("L = ", round(low, 2))) + annotate("text", x = high, y = 0.005, label = paste("U = ", round(high, 2))) + ylab("density") + xlim(0, max(sim)+1) + xlab("daily mean: max Sharpe Ratio") + theme_bw()
+ggplotly(p)
+
+```
+
+Column {data-width=351}
+-----------------------
+### **Figure 6.3: Mean Vs Standard Deviation of portfolio return**
+```{r}
+#
+options(digits = 2, scipen = 99999)
+#
+port_mean <- replicate(1000, port_sample(return, stat = "mean"))
+port_sd <- replicate(1000, port_sample(return, stat = "sd"))
+r_f <- 0.03
+# choose one tangency portfolio scenario
+mu <-  quantile((port_mean[port_mean*252 > r_f]*252), 0.05)
+sigma <- quantile((port_sd*sqrt(252)), 0.05)
+threshold <- -0.12
+alpha <- 0.05
+z_star <-  qnorm(alpha)
+w_star <- (threshold-r_f) / (mu - r_f + sigma*z_star)
+sigma_p <- seq(0, sigma * (1.1*w_star), length.out = 100)
+mu_p <- r_f + (mu - r_f)*sigma_p/sigma
+w <- sigma_p / sigma
+sim_df <- data_frame(sigma_p = sigma_p, mu_p = mu_p, w = w)
+#
+label_42 <- paste(round(w_star*100, 2), "% risky asset", sep = "")
+label_0 <- paste(alpha*100, "% alpha, ", threshold*100, "% threshold")
+label_100 <- paste(1.00*100, "% risky asset \n mu = ", round(mu*100,2), "%\n sigma = ", round(sigma*100,2), "%", sep = "")
+options(digits = 4)
+p <- ggplot(sim_df, aes(x = sigma_p, y = mu_p)) + 
+  geom_line(color = "blue", size = 1.1)
+p <- p + geom_point(aes(x = 0.0 * sigma, y = r_f + (mu-r_f)*0.0), color = "red", size = 3.0) +
+  geom_point(aes(x = w_star * sigma, y = r_f + (mu-r_f)*w_star), shape = 21, color = "red", fill = "white", size = 4, stroke = 4) + 
+  annotate("text", x = w_star * sigma, y = r_f + (mu-r_f)*w_star + 0.01, label = label_42) +
+  geom_point(aes(x = 1.0 * sigma, y = r_f + (mu-r_f)*1.00), color = "red", size = 3.0) + 
+  annotate("text", x = 1.0 * sigma, y = r_f + (mu-r_f)*1.00 + 0.01, label = label_100) +
+  xlab("standard deviation of portfolio return") +
+  ylab("mean of portfolio return") +
+  ggtitle(label_0)
+ggplotly(p)
+
+# sharpe ratio and minimum variance portfolio analysis
+sharpe <- (mu_P - r_f)/sigma_P ## compute Sharpe's ratios
+ind_max <-  (sharpe == max(sharpe)) ## Find maximum Sharpe's ratio
+ind_min <-  (sigma_P == min(sigma_P)) ## find the minimum variance portfolio
+ind_eff <-  (mu_P > mu_P[ind_min]) ## finally the efficient fr(aes(x = 0, y = r_free), colour = "red")ontier
+(w_max <- weights[ind_max,])
+(w_min <- weights[ind_min,])
+
+w_max
+w_min
+```
