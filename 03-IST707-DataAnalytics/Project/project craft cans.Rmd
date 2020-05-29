@@ -1,0 +1,596 @@
+---
+title: "Project Marvel Vs DC"
+author: "Thulasiram Ruppa Krishnan"
+date: "May 14, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(RWeka)      # for RWeka
+library(tm)         # for Term Document Matrix
+library(wordcloud)  # for wordclouds
+library(tidytext)   # for AFFN, convert DTM to DF
+library(stringr)
+library(stringi)
+# ONCE: install.packages("Snowball")
+## NOTE Snowball is not yet available for R v 3.5.x
+## So I cannot use it  - yet...
+##library("Snowball")
+##set working directory
+## ONCE: install.packages("slam")
+library(slam)
+library(quanteda)
+## ONCE: install.packages("quanteda")
+## Note - this includes SnowballC
+library(SnowballC)
+library(arules)
+##ONCE: install.packages('proxy')
+library(proxy)
+library(Matrix)
+library(plyr) ## for adply
+library(ggplot2)
+library(mclust) # for Mclust EM clustering
+library(knitr)
+#install.packages("lda")
+library(lda); library(reshape2)
+# install.packages("rpart")
+# install.packages('rattle')
+# install.packages('rpart.plot')
+# install.packages('RColorBrewer')
+# install.packages("Cairo")
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(Cairo)
+library(scales)
+#install.packages("psych")
+library(psych)
+library(readr)
+library(ggrepel)
+
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(RWeka)      # for RWeka
+library(stringr)
+library(stringi)
+library(slam)
+library(quanteda)
+## Note - this includes SnowballC
+library(SnowballC)
+library(arules)
+library(proxy)
+library(Matrix)
+library(plyr) ## for adply
+library(ggplot2)
+library(mclust) # for Mclust EM clustering
+library(knitr)
+library(lda) 
+library(reshape2)
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(Cairo)
+library(scales)
+library(psych)
+library(readr)
+library(cvTools)
+library(caret)
+library(tree)
+library(e1071)
+library(naivebayes)
+library(dplyr)
+library(tidyr)
+library(magrittr) # for %<>%
+library(Momocs)
+library(xlsx)
+library(class) # for knn
+library(MASS)
+library(mlr)
+library(maps)
+library(ggmap)
+library("data.table")
+library(knitr) 
+library(dplyr)
+library("mapproj")
+```
+
+
+## Clear workspace
+```{r}
+# Clear objects
+rm(list=ls())
+## Set your working director to the path were your code AND datafile is
+setwd("~/01 Personal/MS/IST 707/project")
+getwd()
+#setwd("C://Users//rkrishnan//Documents//01 Personal//MS//IST 707//week4//temp")
+
+```
+
+
+##Load Data
+```{r}
+beers <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project2/craft-cans/beers.csv")
+breweries <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project2/craft-cans/breweries.csv")
+str(beers)
+summary(beers)
+
+beers.breweries <- merge(x=beers,y=breweries,by.x="brewery_id",by.y="X1",all=TRUE)
+beers.breweries <-`colnames<-`(beers.breweries,c("brewery_id","X1","abv","ibu","id","beer.name","style","ounces","brewery.name","city","state"))
+
+beers.clean <- na.omit(beers)
+beers.breweries.clean <- na.omit(beers.breweries)
+breweries.clean <- na.omit(breweries)
+
+df.state <- sort(unique(beers.breweries.clean$state))
+df.state <- data.frame(state.id=(seq_len(length(df.state))),state_cd=df.state)
+beers.breweries.clean <- merge(x=beers.breweries.clean,y=df.state,by.x="state",by.y="state_cd",all=TRUE)
+
+df.style <- unique(beers.breweries.clean$style)
+df.style <- data.frame(style.id=(seq_len(length(df.style))),style=df.style)
+beers.breweries.clean <- merge(beers.breweries.clean,df.style,by.x="style",by.y="style",all=TRUE)
+beers.breweries.clean$style.id <- as.factor(beers.breweries.clean$style.id)
+
+discrete_styles <-discretize(state_summary$styles_num, "fixed", breaks  = c(0,10,25,Inf), labels=c("Low", "Medium","High"))
+state_summary <- cbind(state_summary,discrete_styles)
+
+beers.breweries.clean <- merge(beers.breweries.clean,state_summary[,c("state","discrete_styles")],by.x="state",by.y="state",all=TRUE)
+
+ggplot(data = beers.clean) + geom_point(aes(x=beers.clean$abv , y=beers.clean$ibu,size=beers.clean$abv,color=beers.clean$ibu)) +labs (x="Alcohol Content",y="International Bittering Unit",title = "Alcohol Vs Bittering Unit",color="IBU",size="ABV") +scale_color_continuous(low = "red",high = "blue")
+#geom_label_repel(aes(x=beers.clean$abv , y=beers.clean$ibu,label = beers.clean$name), box.padding   = 0.35, point.padding = 0.5,segment.color = 'grey50') 
+
+ggplot(data = beers.breweries.clean) + geom_point(aes(x=beers.breweries.clean$state , y=beers.clean$abv,size=beers.clean$abv,color=beers.clean$ibu)) +labs (x="State",y="Alchohol Content",title = "State wise Alcohol Vs Bittering Unit",color="IBU",size="ABV") +scale_color_continuous(low = "red",high = "blue")
+
+print(ggplot(beers.breweries.clean, na.rm=TRUE) +geom_point(aes(x=beers.breweries.clean$state , y=beers.clean$abv*100,size=beers.clean$abv*100,color=beers.clean$ibu)) +labs (x="State",y="Alchohol Content",title = "State wise Alcohol Vs Bittering Unit",color="IBU",size="ABV") +scale_color_continuous(low = "red",high = "blue")+ facet_wrap(~beers.breweries.clean$brewery.name, ncol=5, scales = "free_x")) + theme(legend.position = "top",axis.text.x = element_text(angle = 90, hjust = 1),strip.background = element_rect(fill="lightblue", colour="black",size=0.5),plot.margin = unit(c(1,1,1,1),"cm"))
+
+
+for (i in 1:nrow(df.state)/5)
+{
+  frm<-(((i-1)*5)+1)
+  to<-((i)*5)
+print(ggplot(dplyr::filter(beers.breweries.clean, between(beers.breweries.clean$state.id, frm, to)), na.rm=TRUE) +geom_point(aes(x=brewery.name , y=abv*100,size=abv*100,color=ibu)) +labs (x="State",y="Alchohol Content",title = "State wise Alcohol Vs Bittering Unit",color="IBU",size="ABV") +scale_color_continuous(low = "red",high = "blue")+ facet_wrap(~state, ncol=5, scales = "free_x") + theme(legend.position = "top",axis.text.x = element_text(angle = 90, hjust = 1),strip.background = element_rect(fill="lightblue", colour="black",size=0.5),plot.margin = unit(c(1,1,1,1),"cm")))
+}
+
+
+for (i in 1:nrow(df.state)/5)
+{
+  frm<-(((i-1)*5)+1)
+  to<-((i)*5)
+print(ggplot(dplyr::filter(beers.breweries.clean, between(beers.breweries.clean$state.id, frm, to)), na.rm=TRUE) +geom_point(aes(x=style , y=abv*100,size=abv*100,color=ibu)) +labs (x="State",y="Alchohol Content",title = "State wise Alcohol Vs Bittering Unit",color="IBU",size="ABV") +scale_color_continuous(low = "red",high = "blue")+ facet_wrap(~state, ncol=5, scales = "free_x") + theme(legend.position = "top",axis.text.x = element_text(angle = 90, hjust = 1),strip.background = element_rect(fill="lightblue", colour="black",size=0.5),plot.margin = unit(c(1,1,1,1),"cm")))
+}
+
+ggplot(data = beers.breweries.clean) + geom_point(aes(x=beers.breweries.clean$state , y=beers.clean$abv,size=beers.clean$abv,color=beers.clean$ibu)) +labs (x="State",y="Alchohol Content",title = "State wise Alcohol Vs Bittering Unit",color="IBU",size="ABV") +scale_color_continuous(low = "red",high = "blue")
+
+ggplot((data = beers.clean), aes(x=beers.clean$name ,y = beers.clean$abv , fill=beers.clean$ibu)) + geom_bar(stat = "identity") +  labs(x="Name") + theme(legend.position="none", axis.text.x = element_text(angle=60, hjust=1))
+
+```
+
+
+```{r}
+beers.breweries.clean$style.id <- as.factor(beers.breweries.clean$style.id)
+
+# subsetting only those beer styles with >20 observations (based on n_unique in style.avgs)
+beers.breweries.clean.20<- subset(beers.breweries.clean, subset = style %in% c("American IPA","American Pale Ale (APA)","American Amber / Red Ale","American Double / Imperial IPA","American Blonde Ale","American Pale Wheat Ale","American Brown Ale","American Porter","Fruit / Vegetable Beer","Kölsch","Hefeweizen","Witbier","Saison / Farmhouse Ale","Märzen / Oktoberfest"))
+
+styles <- c("American IPA","American Pale Ale (APA)","American Amber / Red Ale","American Double / Imperial IPA","American Blonde Ale","American Pale Wheat Ale","American Brown Ale","American Porter","Fruit / Vegetable Beer","Kölsch","Hefeweizen","Witbier","Saison / Farmhouse Ale","Märzen / Oktoberfest")
+
+# dropping unnecessary levels in style
+beers.breweries.clean.20$style.id<- droplevels(beers.breweries.clean.20$style.id)
+
+beers.breweries.clean.20$style<- as.factor(beers.breweries.clean.20$style)
+
+n=nrow(beers.breweries.clean.20);K=3; sizeblock=n%/%K;alea=runif(n);rang=rank(alea);bloc=(rang-1)%/%sizeblock+1;
+bloc[bloc==K+1]=K;bloc=factor(bloc); bloc=as.factor(bloc);print(summary(bloc))
+
+fit.svm <- tune(svm,style.id~ abv + ibu +ounces , data=beers.breweries.clean.20,
+                   kernel="polynomial", 
+                   ranges=list(cost=c(.001,.01,.1,1,10,100)))
+
+table(beers.breweries.clean.20$style.id)
+table(beers.breweries.clean.20[which(bloc==k),13])
+table(beers.breweries.clean.20[which(bloc!=k),13])
+
+for(k in 1:3){
+
+
+
+#######################################
+# Using SVM -Polynomial
+#######################################
+
+myids=c("label")
+id_col =beers.breweries.clean.20[which(bloc==k),2]
+# id_col <- as.data.frame(beers.breweries.clean[which(bloc==k),13])
+# id_col <-`colnames<-`(id_col,myids)
+df_execution_time <- data.frame(Model="SVM-Polynomial",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL")
+row.names(df_execution_time) <-NULL
+df_execution_time$end_time<-as.character(df_execution_time$end_time)
+df_execution_time$start_time<-as.character(df_execution_time$start_time)
+df_execution_time$Transformation<-as.character(df_execution_time$Transformation)
+df_execution_time$Model<-as.character(df_execution_time$Model)
+df_execution_time$CV<-as.character(df_execution_time$CV)
+df_execution_time$test_start_time<-as.character(df_execution_time$test_start_time)
+df_execution_time$test_end_time<-as.character(df_execution_time$test_end_time)
+svm.polynomial <- svm(style~ abv + ibu +ounces, data=beers.breweries.clean.20[bloc!=k,c(2,5,6,9)], kernel="polynomial", cost=.01, scale=FALSE)
+df_execution_time[1,5] <- as.character(Sys.time())
+
+
+(pred.svm.polynomial <- predict(svm.polynomial, (beers.breweries.clean.20[bloc==k,c(5,6,9)]), type="class"))
+
+newpred.svm.polynomial=data.frame(cbind(id_col, pred.svm.polynomial))
+newpred.svm.polynomial <-`colnames<-`(newpred.svm.polynomial,c("actual","classified"))
+
+pred.svm.polynomial.code <-data.frame(pred.svm.polynomial)
+pred.svm.polynomial.code$Ord <- as.integer(row.names(pred.svm.polynomial.code))
+pred.svm.polynomial.code <- merge(x=pred.svm.polynomial.code, y=df.style, by.x="pred.svm.polynomial",by.y="style",all.x=TRUE)
+pred.svm.polynomial.code <- pred.svm.polynomial.code[order(pred.svm.polynomial.code$Ord),]
+pred.svm.polynomial.code <-droplevels(pred.svm.polynomial.code)
+
+
+id_col.code <-data.frame(id_col)
+id_col.code$Ord <- as.integer(row.names(id_col.code))
+id_col.code <- merge(x=id_col.code, y=df.style, by.x="id_col",by.y="style",all.x=TRUE)
+id_col.code <- id_col.code[order(id_col.code$Ord),]
+id_col.code <-droplevels(id_col.code)
+
+
+confusionMatrix(pred.svm.polynomial, id_col)
+
+confusionMatrix(pred.svm.polynomial.code$style.id, id_col.code$style.id) 
+
+svm.cm <-confusionMatrix(pred.svm.polynomial, id_col) # 53% accuracy
+svm.cm <-data.frame(svm.cm[2])
+svm.cm <- `colnames<-`(svm.cm,c("classified","actual","Freq"))
+# write.csv(table(svm.cm[2]),"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project2/craft-cans/svm.csv")
+
+plot_CV(table(actual=id_col,classified=pred.svm.polynomial), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+df_accuracy <-cbind(Model="SVM-Polynomial",CV=k,Transformation="None",accuracy=sum(newpred.svm.polynomial$actual==newpred.svm.polynomial$classified)/length(id_col))
+
+###################################################################
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="SVM-Linear",CV=l,Transformation="None",start_time=Sys.time(),end_time=NA,test_start_time=NA,test_end_time=NA))
+
+df_execution_time[2,4] <- as.character(Sys.time())
+svm.linear <- svm(style~ abv + ibu +ounces, data=beers.breweries.clean.20[bloc!=k,c(2,5,6,9)], kernel="linear", cost=.01, scale=FALSE)
+df_execution_time[2,5] <- as.character(Sys.time())
+
+
+(pred.svm.linear <- predict(svm.linear, (beers.breweries.clean.20[bloc==k,c(5,6,9)]), type="class"))
+
+newpred.svm.linear=data.frame(cbind(id_col, pred.svm.linear))
+newpred.svm.linear <-`colnames<-`(newpred.svm.linear,c("actual","classified"))
+
+pred.svm.linear.code <-data.frame(pred.svm.linear)
+pred.svm.linear.code$Ord <- as.integer(row.names(pred.svm.linear.code))
+pred.svm.linear.code <- merge(x=pred.svm.linear.code, y=df.style, by.x="pred.svm.linear",by.y="style",all.x=TRUE)
+pred.svm.linear.code <- pred.svm.linear.code[order(pred.svm.linear.code$Ord),]
+pred.svm.linear.code <-droplevels(pred.svm.linear.code)
+
+confusionMatrix(pred.svm.linear, id_col)
+
+confusionMatrix(pred.svm.linear.code$style.id, id_col.code$style.id) 
+
+svm.cm <-confusionMatrix(pred.svm.linear, id_col) # 53% accuracy
+svm.cm <-data.frame(svm.cm[2])
+svm.cm <- `colnames<-`(svm.cm,c("classified","actual","Freq"))
+# write.csv(table(svm.cm[2]),"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project2/craft-cans/svm.csv")
+
+plot_CV(table(actual=id_col,classified=pred.svm.linear), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+df_accuracy <-rbind(df_accuracy,cbind(Model="SVM-Linear",CV=l,Transformation="None",accuracy=sum(newpred.svm.linear$actual==newpred.svm.linear$classified)/length(id_col)))
+
+
+#######################################
+# kNN (k - nearest neighbor) 
+#######################################
+
+# Source: https://www.analyticsvidhya.com/blog/2015/08/learning-concept-knn-algorithms-programming/
+# A large k value has benefits which include reducing the variance due to the noisy data; 
+# the side effect being developing a bias due to which the learner tends to ignore the smaller 
+# patterns which may have useful insights.
+# The value for k is generally chosen as the square root of the number of observations.
+# Square root of 303 = 17 
+
+
+# k=5
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-5",CV=l,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+knn.1<- knn(beers.breweries.clean.20[bloc!=l,c(5,6,9)], beers.breweries.clean.20[bloc==l,c(5,6,9)], (beers.breweries.clean.20[bloc!=l,2, drop=TRUE]), k=5)
+df_execution_time[3,5] <- as.character(Sys.time())
+confusionMatrix(knn.1, id_col) 
+
+newpred.knn.1=cbind(id_col, knn.1)
+newpred.knn.1 <-`colnames<-`(newpred.knn.1,c("actual","classified"))
+
+knn.1.code <-data.frame(knn.1)
+knn.1.code$Ord <- as.integer(row.names(knn.1.code))
+knn.1.code <- merge(x=knn.1.code, y=df.style, by.x="knn.1",by.y="style",all.x=TRUE)
+knn.1.code <- knn.1.code[order(knn.1.code$Ord),]
+knn.1.code <-droplevels(knn.1.code)
+
+confusionMatrix(knn.1.code$style.id, id_col.code$style.id) 
+
+plot_CV(table(actual=id_col,classified=knn.1), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-5",CV=l,Transformation="None",accuracy=sum(id_col==knn.1)/length(id_col)))
+
+##################################################
+
+# k=3
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="KNN-3",CV=l,Transformation="None",start_time= Sys.time(),end_time=NA,test_start_time=NA,test_end_time=NA))
+knn.2<- knn(beers.breweries.clean.20[bloc!=l,c(5,6,9)], beers.breweries.clean.20[bloc==l,c(5,6,9)], (beers.breweries.clean.20[bloc!=l,2, drop=TRUE]), k=5)
+df_execution_time[4,5] <- as.character(Sys.time())
+confusionMatrix(knn.2, id_col) 
+
+newpred.knn.2=cbind(id_col, knn.2)
+newpred.knn.2 <-`colnames<-`(newpred.knn.2,c("actual","classified"))
+
+knn.2.code <-data.frame(knn.2)
+knn.2.code$Ord <- as.integer(row.names(knn.2.code))
+knn.2.code <- merge(x=knn.2.code, y=df.style, by.x="knn.2",by.y="style",all.x=TRUE)
+knn.2.code <- knn.2.code[order(knn.2.code$Ord),]
+knn.2.code <-droplevels(knn.2.code)
+
+confusionMatrix(knn.2.code$style.id, id_col.code$style.id) 
+
+plot_CV(table(actual=id_col,classified=knn.2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="KNN-3",CV=l,Transformation="None",accuracy=sum(id_col==knn.2)/length(id_col)))
+
+
+##################################################
+# Naive Bayes
+##################################################
+
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="NaiveBayes",CV=l,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+NB_e1071<- naiveBayes(style~ abv+ibu+ounces, data=beers.breweries.clean.20[bloc!=l,c(2,5,6,9)], na.action = na.pass)
+df_execution_time[5,5] <- as.character(Sys.time())
+
+NB_e1071
+
+# Testing the model
+NB_e1071_Pred<- predict(NB_e1071, beers.breweries.clean.20[bloc==l,c(5,6,9)])
+NB.p.df<- as.data.frame(NB_e1071_Pred)
+
+newpred.nb <-cbind(id_col, NB_e1071_Pred)
+data.frame(newpred.nb)
+
+df.style$style.id <- as.factor(df.style$style.id)
+
+NB_e1071_Pred.code <-data.frame(NB_e1071_Pred)
+NB_e1071_Pred.code$Ord <- as.integer(row.names(NB_e1071_Pred.code))
+NB_e1071_Pred.code <- merge(x=NB_e1071_Pred.code, y=df.style, by.x="NB_e1071_Pred",by.y="style",all.x=TRUE)
+NB_e1071_Pred.code <- NB_e1071_Pred.code[order(NB_e1071_Pred.code$Ord),]
+NB_e1071_Pred.code <-droplevels(NB_e1071_Pred.code)
+
+
+
+newpred.nb <-`colnames<-`(newpred.nb,c("actual","classified"))
+confusionMatrix(NB_e1071_Pred,id_col)
+confusionMatrix(NB_e1071_Pred.code$style.id,id_col.code$style.id)
+
+unique(id_col.code[, -c(2)])
+confusionMatrix(newpred.nb)
+plot_CV(table(actual=id_col,classified=NB_e1071_Pred), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+df_accuracy <- rbind(df_accuracy,cbind(Model="NB-e1071",CV=k,Transformation="None",accuracy=sum(NB_e1071_Pred==id_col)/length(id_col)))
+
+# Calculating precision and recall
+# (accuracy<- sum(diag(Ptable)) / sum(Ptable))
+# (precision<- diag(Ptable) / rowSums(Ptable)) # Precision for each class
+# (recall<- (diag(Ptable) / colSums(Ptable))) # Recall for each class
+
+##################################################
+# Random Forest
+##################################################
+
+df_execution_time <- rbind(df_execution_time,data.frame(Model="RF-mtry=2",CV=k,Transformation="None",start_time=as.character( Sys.time()),end_time="NULL",test_start_time="NULL",test_end_time="NULL"))
+rf.2<- randomForest(style ~ abv+ibu+ounces, data = beers.breweries.clean.20[bloc!=l,c(2,5,6,9)], ntree = 500, mtry = 2, importance = TRUE)
+df_execution_time[6,5] <- as.character(Sys.time())
+
+
+rf.2 # error rate = 45.31%
+
+df_execution_time[4,6] <- as.character(Sys.time())
+rf.p.2<- predict(rf.2, beers.breweries.clean.20[bloc==l,c(5,6,9)])
+df_execution_time[4,7] <- as.character(Sys.time())
+
+confusionMatrix(rf.p.2, id_col) 
+
+rf.p.2.code <-data.frame(rf.p.2)
+rf.p.2.code$Ord <- as.integer(row.names(rf.p.2.code))
+rf.p.2.code <- merge(x=rf.p.2.code, y=df.style, by.x="rf.p.2",by.y="style",all.x=TRUE)
+rf.p.2.code <- rf.p.2.code[order(rf.p.2.code$Ord),]
+rf.p.2.code <-droplevels(rf.p.2.code)
+
+confusionMatrix(rf.p.2.code$style.id, id_col.code$style.id) 
+
+
+newpred.rf.2=cbind(id_col, rf.p.2)
+newpred.rf.2 <-`colnames<-`(newpred.rf.2,c("actual","classified"))
+
+
+plot_CV(table(actual=id_col,classified=rf.p.2), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-mtry=2",CV=k,Transformation="None",accuracy=sum(id_col==rf.p.2)/length(id_col)))
+
+####################################################
+df_execution_time <- rbind(df_execution_time,data.frame(Model="RF-Default",CV=k,Transformation="None",start_time= Sys.time(),end_time=NA,test_start_time=NA,test_end_time=NA))
+rf.3<- randomForest(style ~ abv+ibu+ounces, data = beers.breweries.clean.20[bloc!=l,c(2,5,6,9)],  importance = TRUE)
+df_execution_time[7,5] <- as.character(Sys.time())
+
+
+rf.3 # error rate = 45.31%
+
+df_execution_time[7,6] <- as.character(Sys.time())
+rf.p.3<- predict(rf.3, beers.breweries.clean.20[bloc==l,c(5,6,9)])
+df_execution_time[7,7] <- as.character(Sys.time())
+
+confusionMatrix(rf.p.3, id_col) 
+
+rf.p.3.code <-data.frame(rf.p.3)
+rf.p.3.code$Ord <- as.integer(row.names(rf.p.3.code))
+rf.p.3.code <- merge(x=rf.p.3.code, y=df.style, by.x="rf.p.3",by.y="style",all.x=TRUE)
+rf.p.3.code <- rf.p.3.code[order(rf.p.3.code$Ord),]
+rf.p.3.code <-droplevels(rf.p.3.code)
+
+confusionMatrix(rf.p.3.code$style.id, id_col.code$style.id) 
+
+
+newpred.rf.3=cbind(id_col, rf.p.3)
+newpred.rf.3 <-`colnames<-`(newpred.rf.3,c("actual","classified"))
+
+
+plot_CV(table(actual=id_col,classified=rf.p.3), freq = FALSE, rm0 = TRUE, cex = 5,round = 2, labels = TRUE)
+
+# store accuracy for plot
+
+df_accuracy <- rbind(df_accuracy,cbind(Model="RF-Default",CV=k,Transformation="None",accuracy=sum(id_col==rf.p.3)/length(id_col)))
+
+
+
+df_execution_time$start_time <-as.POSIXct(df_execution_time$start_time,format="%Y-%m-%d %H:%M:%S")
+df_execution_time$end_time <-as.POSIXct(df_execution_time$end_time,format="%Y-%m-%d %H:%M:%S")
+df_execution_time$test_start_time <-as.POSIXct(df_execution_time$test_start_time,format="%Y-%m-%d %H:%M:%S")
+df_execution_time$test_end_time <-as.POSIXct(df_execution_time$test_end_time,format="%Y-%m-%d %H:%M:%S")
+
+df_accuracy <-data.frame(df_accuracy)
+df_accuracy$accuracy <-as.integer(substr(df_accuracy$accuracy,3,4))
+
+df_accuracy.p <- df_accuracy[,-c(2,3)]
+df_accuracy.p.t <- data.frame(df_accuracy.p, stringsAsFactors = FALSE)
+df_accuracy.p.t$Model <-as.character(df_accuracy.p.t$Model)
+test <-data.frame(cbind(Model="Decision Tree-Default",accuracy=50), stringsAsFactors = FALSE)
+test$accuracy <- as.integer(test$accuracy)
+df_accuracy.p.t <- rbind(df_accuracy.p.t,test)
+test <-data.frame(cbind(Model="Decision Tree-Pruned",accuracy=51), stringsAsFactors = FALSE)
+test$accuracy <- as.integer(test$accuracy)
+df_accuracy.p.t <- rbind(df_accuracy.p.t,test)
+test <-data.frame(cbind(Model="Decision Tree-Bagged",accuracy=52), stringsAsFactors = FALSE)
+test$accuracy <- as.integer(test$accuracy)
+df_accuracy.p.t <- rbind(df_accuracy.p.t,test)
+# Accuracy comparison between models
+ggplot(data.frame(df_accuracy.p.t), aes(Model, accuracy)) +
+  geom_linerange(
+    aes(x = Model,ymin=0, ymax=accuracy), 
+    color = "lightgray", size = 1.5,
+    position = position_dodge(0.3)
+    )+
+  geom_point(
+    aes(color = Model),
+    position = position_dodge(0.3), size = 3
+    )+
+  scale_color_brewer(palette=c("Set1","black")) +labs (x="Model",y="Accuracy in Percentage",title = "Accuracy comparison of Models in percentage") + theme(legend.position = "bottom") 
+
+
+# performance comparison for model generation between algorithm
+ggplot(data.frame(df_execution_time), aes(Model, difftime(df_execution_time$end_time, df_execution_time$start_time, units='mins'))) +
+  geom_linerange(
+    aes(x = Model,ymin=0, ymax=difftime(df_execution_time$end_time, df_execution_time$start_time, units='mins') , group = Transformation), 
+    color = "lightgray", size = 1.5,
+    position = position_dodge(0.3)
+    )+
+  geom_point(
+    aes(color = Model),
+    position = position_dodge(0.3), size = 3
+    )+
+  scale_color_brewer(palette="Paired")+labs (x="Model",y="Minutes",title = "Time took to build the model") + theme(legend.position = "bottom")
+
+
+df_accuracy.p <- df_accuracy[,c(1,4)]
+# Source: http://uc-r.github.io/naive_bayes
+# set up 10-fold cross validation procedure
+train_control<- trainControl(method = "cv", number = 10)
+
+# set up tuning grid
+search_grid<- expand.grid(usekernel = c(TRUE, FALSE), fL = 0:5, adjust = seq(0, 5, by = 1))
+# train model
+nb.m2<- train(style~ abv+ibu+ounces, dt_train, method = "nb", trControl = train_control, 
+               tuneGrid = search_grid, preProc = c("BoxCox", "center", "scale", "pca"))
+# top 5 modesl
+nb.m2$results %>% 
+  top_n(5, wt = Accuracy) %>%
+  arrange(desc(Accuracy))
+# usekernel fL adjust  Accuracy     Kappa AccuracySD    KappaSD
+# 1      TRUE  0      1 0.5349776 0.4429408 0.04587179 0.05195278
+# 2      TRUE  1      1 0.5349776 0.4429408 0.04587179 0.05195278
+# 3      TRUE  2      1 0.5349776 0.4429408 0.04587179 0.05195278
+# 4      TRUE  3      1 0.5349776 0.4429408 0.04587179 0.05195278
+# 5      TRUE  4      1 0.5349776 0.4429408 0.04587179 0.05195278
+# 6      TRUE  5      1 0.5349776 0.4429408 0.04587179 0.05195278
+
+# plot search grid results
+plot(nb.m2)
+
+# results for best model
+confusionMatrix(nb.m2)
+
+pred.2<- predict(nb.m2, newdata = dt_test)
+confusionMatrix(pred.2, dt_test$style)
+
+
+
+}
+
+```
+
+
+```{r}
+
+
+# merger crash data with zip code and county data to get the lat long 
+map.county <- map_data('county')
+us <- map_data("state")
+
+df.state <- setNames(state.abb, state.name)
+df.state <-data.frame(state_nm=names(df.state),state_cd=df.state)
+rownames(df.state) <- NULL
+beers.breweries.clean <- merge(beers.breweries.clean,df.state,by.x="state",by.y="state_cd",all=TRUE)
+beers.breweries.clean$state_nm <- tolower(beers.breweries.clean$state_nm)
+snames <- aggregate(cbind(long, lat) ~ region, data=us, FUN=function(x)mean(range(x))) 
+# beers.breweries.clean <- merge(beers.breweries.clean,snames,by.x="state",by.y="region",all=TRUE)
+
+# calculate average abv and ibu per state
+state_summary <- beers.breweries.clean %>%
+  dplyr::group_by(state_nm,state) %>%
+  dplyr::summarize(abv_mean = mean(abv),ibu_mean=mean(ibu),styles_num = length(unique(style))) %>%
+  dplyr::ungroup()
+
+state_summary <- merge(state_summary,snames,by.x="state_nm",by.y="region",all=TRUE)
+
+# State Average Alcohol content
+ggplot(data=state_summary,aes(map_id=state_nm)) +geom_map(map=us, aes(fill=state_summary$abv_mean*100),color="black") + expand_limits(x=us$long,y=us$lat) + coord_map() + ggtitle("USA State Average Alchohol content") + labs(x = "", y = "")+ scale_x_continuous(breaks = NULL) + scale_y_continuous(breaks = NULL) + scale_fill_continuous(low = "blue", high= "pink", guide = guide_colorbar(title = "Average Alcohol content in percentage")) + geom_text( aes( long, lat, label = state), size=3,color="white") 
+
+# State Average IBU
+ggplot(data=state_summary,aes(map_id=state_nm)) +geom_map(map=us, aes(fill=state_summary$ibu_mean),color="black") + expand_limits(x=us$long,y=us$lat) + coord_map() + ggtitle("USA State Average Bitterness Unit") + labs(x = "", y = "")+ scale_x_continuous(breaks = NULL) + scale_y_continuous(breaks = NULL) + scale_fill_continuous(low = "blue", high= "pink", guide = guide_colorbar(title = "Average Bitterness unit")) + geom_text( aes( long, lat, label = state), size=3,color="black") 
+
+# number of styles by state
+ggplot(data=state_summary,aes(map_id=state_nm)) +geom_map(map=us, aes(fill=state_summary$styles_num),color="black") + expand_limits(x=us$long,y=us$lat) + coord_map() + ggtitle("Number of styles by state") + labs(x = "", y = "")+ scale_x_continuous(breaks = NULL) + scale_y_continuous(breaks = NULL) + scale_fill_continuous(low = "blue", high= "pink", guide = guide_colorbar(title = "Number of styles")) + geom_text( aes( long, lat, label = state), size=3,color="black") 
+
+
+```
+

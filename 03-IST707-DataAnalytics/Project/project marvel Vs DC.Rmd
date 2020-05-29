@@ -1,0 +1,305 @@
+---
+title: "Project Marvel Vs DC"
+author: "Thulasiram Ruppa Krishnan"
+date: "May 14, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(RWeka)      # for RWeka
+library(tm)         # for Term Document Matrix
+library(wordcloud)  # for wordclouds
+library(tidytext)   # for AFFN, convert DTM to DF
+library(stringr)
+library(stringi)
+# ONCE: install.packages("Snowball")
+## NOTE Snowball is not yet available for R v 3.5.x
+## So I cannot use it  - yet...
+##library("Snowball")
+##set working directory
+## ONCE: install.packages("slam")
+library(slam)
+library(quanteda)
+## ONCE: install.packages("quanteda")
+## Note - this includes SnowballC
+library(SnowballC)
+library(arules)
+##ONCE: install.packages('proxy')
+library(proxy)
+library(Matrix)
+library(plyr) ## for adply
+library(ggplot2)
+library(mclust) # for Mclust EM clustering
+library(knitr)
+#install.packages("lda")
+library(lda); library(reshape2)
+# install.packages("rpart")
+# install.packages('rattle')
+# install.packages('rpart.plot')
+# install.packages('RColorBrewer')
+# install.packages("Cairo")
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(Cairo)
+library(scales)
+#install.packages("psych")
+library(psych)
+library(readr)
+```
+
+## BioConductor Installation
+```{r}
+
+## Graph the origional dataset
+installed.packages()[, c("Package", "LibPath")]
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager", lib = "C://Program Files//R//R-3.6.0//library")
+BiocManager::install()
+BiocManager::install(c("scater"))
+library(ggplot2)
+library(scater) # use this package to allow adjacent plotting 
+install.packages("scater")
+install.packages("C:/Users/rkrishnan/AppData/Local/Temp/RtmpUzwpWD/downloaded_packages/scater_1.12.0.zip", repos = NULL, type = "win.binary")
+detach("package:scater", unload=TRUE)
+detach_package <- function(pkg, character.only = FALSE)
+{
+  if(!character.only)
+  {
+    pkg <- deparse(substitute(pkg))
+  }
+  search_item <- paste("package", pkg, sep = ":")
+  while(search_item %in% search())
+  {
+    detach(search_item, unload = TRUE, character.only = TRUE)
+  }
+}
+
+```
+
+
+## Clear workspace
+```{r}
+# Clear objects
+rm(list=ls())
+## Set your working director to the path were your code AND datafile is
+setwd("~/01 Personal/MS/IST 707/project")
+getwd()
+#setwd("C://Users//rkrishnan//Documents//01 Personal//MS//IST 707//week4//temp")
+
+```
+
+
+##Load Data
+```{r}
+marvel <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project/marvel-wikia-data.csv/marvel-wikia-data.csv")
+dc <- read_csv("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project/dc-wikia-data.csv/dc-wikia-data.csv")
+# str(marvel)
+# summary(marvel)
+# view(marvel)
+# table(marvel$ID)
+
+marvel$ID <- trimws(gsub("Identity", "", marvel$ID),which = "both") 
+marvel$ALIGN <- trimws(gsub("Characters", "", marvel$ALIGN),which = "both") 
+marvel$EYE <- trimws(gsub("Eyes", "", marvel$EYE),which = "both") 
+marvel$HAIR <- trimws(gsub("Hair", "", marvel$HAIR),which = "both") 
+marvel$SEX <- trimws(gsub("Characters", "", marvel$SEX),which = "both") 
+marvel$ALIVE <- trimws(gsub("Characters", "", marvel$ALIVE),which = "both") 
+marvel$GSM <- trimws(gsub("Characters", "", marvel$GSM),which = "both")
+marvel$group <-"marvel"
+dc$ID <- trimws(gsub("Identity", "", dc$ID),which = "both") 
+dc$ALIGN <- trimws(gsub("Characters", "", dc$ALIGN),which = "both") 
+dc$EYE <- trimws(gsub("Eyes", "", dc$EYE),which = "both") 
+dc$HAIR <- trimws(gsub("Hair", "", dc$HAIR),which = "both") 
+dc$SEX <- trimws(gsub("Characters", "", dc$SEX),which = "both") 
+dc$ALIVE <- trimws(gsub("Characters", "", dc$ALIVE),which = "both") 
+dc$GSM <- trimws(gsub("Characters", "", dc$GSM),which = "both") 
+dc$group <-"dc"
+
+colnames(dc) <-  c("page_id","name","urlslug","ID","ALIGN","EYE","HAIR","SEX",  "GSM","ALIVE","APPEARANCES","FIRST APPEARANCE","YEAR","group" )
+colnames(marvel) <-  c("page_id","name","urlslug","ID","ALIGN","EYE","HAIR","SEX",  "GSM","ALIVE","APPEARANCES","FIRST APPEARANCE","YEAR","group" )
+
+marvel_dc <- rbind(marvel,dc)
+marvel_dc$group <- as.factor(marvel_dc$group)
+ggYear<- ggplot((marvel_dc[which(!is.na(marvel_dc$YEAR)),]), aes(x = YEAR, fill=group)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="Year") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggID <- ggplot((marvel_dc[which(!is.na(marvel_dc$ID)),]), aes(x = ID, fill=group,ymax=..count..+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="Identity") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))+ geom_text( aes(label=..count..),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+ scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggALIGN <- ggplot((marvel_dc[which(!is.na(marvel_dc$ALIGN)),]), aes(x = ALIGN, fill=group,ymax=..count..+5,na.rm = TRUE)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="ALIGN") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))+ geom_text( aes(label=..count..),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggEYE <- ggplot(data = (marvel_dc[which(!is.na(marvel_dc$EYE)),]), aes(x = EYE, fill=group,ymax=..count..+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="EYE") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=..count..),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggHAIR<- ggplot((marvel_dc[which(!is.na(marvel_dc$HAIR)),]), aes(x = HAIR, fill=group,ymax=..count..+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="HAIR") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=..count..),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggSEX<- ggplot((marvel_dc[which(!is.na(marvel_dc$SEX)),]), aes(x = SEX, fill=group,ymax=..count..+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="SEX") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=..count..),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggGSM <- ggplot((marvel_dc[which(!is.na(marvel_dc$GSM)),]), aes(x = GSM, fill=group,ymax=..count..+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="GSM") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=..count..),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggALIVE <- ggplot((marvel_dc[which(!is.na(marvel_dc$ALIVE)),]), aes(x = ALIVE, fill=group,ymax=..count..+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="ALIVE") + theme(legend.position="none",plot.title = element_text(hjust = 0.5))+ geom_text( aes(label=..count..),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+ scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+template <-ggplot(data.frame(comics=c("DC","Marvel"),value=c(1,2)),aes(x=comics,fill=comics))+geom_bar( width = 0) +scale_fill_manual(values = c("#0073C2FF", "#EFC000FF"))+labs(y=NULL,x=NULL)+  theme_void() + theme(legend.position=c(0.5, 0.5))
+
+multiplot(template,ggYear, ggID, ggALIGN, ggEYE, ggHAIR, ggSEX, ggGSM, ggALIVE,cols=3)
+
+# Plot percentage
+
+ggYear.p<- ggplot((marvel_dc[which(!is.na(marvel_dc$YEAR)),]), aes(x = YEAR,y = round((..count..)/sum(..count..)*100,1), fill=group)) + geom_bar(position = position_dodge(preserve = 'single')) +  labs(x="Year",y="Percentage") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggID.p <- ggplot((marvel_dc[which(!is.na(marvel_dc$ID)),]), aes(x = ID,y = round((..count..)/sum(..count..)*100), fill=group,ymax=(..count..)/sum(..count..)+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="Identity",y="Percentage") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))+ geom_text( aes(label=round((..count..)/sum(..count..)*100)),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+ scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggALIGN.p <- ggplot((marvel_dc[which(!is.na(marvel_dc$ALIGN)),]), aes(x = ALIGN,y = round((..count..)/sum(..count..)*100), fill=group,ymax=round((..count..)/sum(..count..)*100)+5,na.rm = TRUE)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="ALIGN",y="Percentage") + theme(legend.position="none", plot.title = element_text(hjust = 0.5))+ geom_text( aes(label=round((..count..)/sum(..count..)*100)),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggEYE.p <- ggplot(data = (marvel_dc[which(!is.na(marvel_dc$EYE)),]), aes(x = EYE,y = round((..count..)/sum(..count..)*100), fill=group,ymax=round((..count..)/sum(..count..)*100)+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="EYE",y="Percentage") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=round((..count..)/sum(..count..)*100)),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggHAIR.p <- ggplot((marvel_dc[which(!is.na(marvel_dc$HAIR)),]), aes(x = HAIR,y = round((..count..)/sum(..count..)*100), fill=group,ymax=round((..count..)/sum(..count..)*100)+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="HAIR",y="Percentage") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=round((..count..)/sum(..count..)*100)),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggSEX.p <- ggplot((marvel_dc[which(!is.na(marvel_dc$SEX)),]), aes(x = SEX,y = round((..count..)/sum(..count..)*100), fill=group,ymax=round((..count..)/sum(..count..)*100)+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="SEX",y="Percentage") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=round((..count..)/sum(..count..)*100)),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggGSM.p <- ggplot((marvel_dc[which(!is.na(marvel_dc$GSM)),]), aes(x = GSM,y = round((..count..)/sum(..count..)*100), fill=group,ymax=round((..count..)/sum(..count..)*100)+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="GSM",y="Percentage") + theme(legend.position="none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+ geom_text( aes(label=round((..count..)/sum(..count..)*100)),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+ggALIVE.p <- ggplot((marvel_dc[which(!is.na(marvel_dc$ALIVE)),]), aes(x = ALIVE,y = round((..count..)/sum(..count..)*100), fill=group,ymax=round((..count..)/sum(..count..)*100)+5)) + geom_bar(position = position_dodge(preserve = 'single')) +
+  labs(x="ALIVE",y="Percentage") + theme(legend.position="none",plot.title = element_text(hjust = 0.5))+ geom_text( aes(label=round((..count..)/sum(..count..)*100)),stat="count", position = position_dodge(0.8),  vjust = -0.3, size = 3.5)+ scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) 
+
+
+template.p <-ggplot(data.frame(comics=c("DC","Marvel"),value=c(1,2)),aes(x=comics,fill=comics))+geom_bar( width = 0) +scale_fill_manual(values = c("#0073C2FF", "#EFC000FF"))+labs(y=NULL,x=NULL)+  theme_void() + theme(legend.position=c(0.5, 0.5))
+
+
+multiplot(template.p,ggYear.p, ggID.p, ggALIGN.p, ggEYE.p, ggHAIR.p, ggSEX.p, ggGSM.p, ggALIVE.p, cols=3)
+
+```
+
+
+# 3d plot
+```{r}
+library(rgl, pos=67)
+library(nlme, pos=68)
+library(mgcv, pos=68)
+scatter3d(APPEARANCES~page_id+YEAR|group, data=marvel_dc, surface=FALSE, 
+  residuals=TRUE, parallel=FALSE, bg="white", axis.scales=TRUE, grid=TRUE, 
+  ellipsoid=FALSE)
+
+```
+
+#Html scrapping
+```{r}
+
+install.packages("selectr")
+install.packages("xml2")
+install.packages("rvest")
+
+library(selectr)
+library(xml2)
+library(rvest)
+
+# read_html(url) : scrape HTML content from a given URL
+# html_nodes(): identifies HTML wrappers.
+# html_nodes(".class"): calls node based on CSS class
+# html_nodes("#id"): calls node based on <div> id
+# html_nodes(xpath="xpath"): calls node based on xpath (we'll cover this later)
+# html_attrs(): identifies attributes (useful for debugging)
+# html_table(): turns HTML tables into data frames
+# html_text(): strips the HTML tags and extracts only the text
+
+```
+
+# sample code for Web scrapping
+```{r}
+#Specifying the url for desired website to be scrapped
+url <- "https://www.amazon.com/Apple-iPhone-XR-64GB-exclusively/dp/B07K97BQDF/ref=sr_1_1_sspa?keywords=iphone&qid=1558123383&s=gateway&sr=8-1-spons&psc=1"
+#Reading the html content from Amazon
+webpage <- read_html(url)
+
+#scrape title of the product
+title_html <- html_nodes(webpage, "h1#title")
+title <- html_text(title_html)
+head(title)
+
+# remove all space and new lines
+str_replace_all(title, "[\r\n]","")
+
+# scrape the price of the product
+price_html <- html_nodes(webpage, "span#priceblock_ourprice")
+price <- html_text(price_html)
+# remove spaces and new line
+str_replace_all(price, "[\r\n]" , "")
+# print price value
+head(price)
+
+# scrape product description
+desc_html <- html_nodes(webpage, "div#productDescription")
+desc <- html_text(desc_html)
+# replace new lines and spaces
+desc <- str_replace_all(desc, "[\r\n\t]" , "")
+desc <- str_trim(desc)
+head(desc)
+
+```
+
+#Scrapping marvel data
+```{r}
+
+root <-"https://marvel.fandom.com/wiki/"
+
+#Specifying the url for desired website to be scrapped
+url <- paste(root, substr(marvel_dc[1,3],3,nchar(marvel_dc[1,3])), sep = "")
+#Reading the html content from Amazon
+webpage <- read_html(url)
+
+#scrape links and references
+
+ul_text <- webpage %>%
+        html_nodes("ul") %>%
+        html_text()
+
+ul_text <-str_replace_all(ul_text, "[\r\n\t]" , "")
+
+li_text <- webpage %>%
+        html_nodes("li") %>%
+        html_text()
+
+li_text <-str_replace_all(li_text, "[\r\n\t]" , "")
+write.file(li_text,"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project/li_text.txt")
+
+h2_text <- webpage %>%
+        html_nodes("h2") %>%
+        html_text()
+
+h2_text <-str_replace_all(h2_text, "[\r\n\t]" , "")
+
+href_text <- webpage %>%
+        html_nodes("a") %>% html_attr("href") %>%  href_text[grepl(pattern = "/Appearances", href_text)]
+
+
+href_text <-str_replace_all(href_text, "[\r\n\t]" , "")
+write.file(href_text,"C:/Users/rkrishnan/Documents/01 Personal/MS/IST 707/project/href_text.txt")
+
+
+xp_text <- webpage %>%
+      html_nodes("span#Links and References") %>%  html_text()
+
+```
+
