@@ -1,0 +1,269 @@
+---
+title: "Week4_asynch"
+author: "Thulasiram Ruppa Krishnan"
+date: "July 24, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Download all data
+
+```{r}
+data.all <- read.csv("data/eurostock.csv",stringsAsFactors = FALSE)
+
+str(data.all) # check the date object below
+```
+
+
+```{r}
+str(row.names <- data.all$X) # We find that 1st field X contains dates
+
+date <- as.Date(row.names) # convert string dates to date objects
+str(date) # Always look at the structure to be sure
+
+rownames(data.all) <- date
+
+head(data.all)
+
+```
+
+## subset the data
+
+```{r}
+## subset the data using start and end date
+start.date <- "1975-06-02"
+end.date <- "1990-12-30"
+
+# First column looks for filtered
+# dates, second and third columns 
+# pull out prices
+
+price <- data.all[start.date<=date & date <=end.date, c("RWE","THYSSEN")]
+
+# We add a check to ensure that price is a matrix and than ncol will work
+
+if(!is.matrix(price)) price <- rbind(price,deparse.level = "OL")
+
+str(price)
+
+head(price) # show the beginning
+
+```
+
+
+```{r}
+(end.idx <- dim(price)[1])
+
+(price.2 <- rbind(price[1:5,],price[(end.idx-4):end.idx,]))
+
+```
+
+```{r}
+## Use scatter plots of the two price series along with their histograms to examine
+
+library(psych)
+pairs.panels(price)
+
+price.rownames <- rownames(price)
+plot(as.Date(price.rownames),price[,"THYSSEN"],type="l",
+     main="Thyssen stock price data", # title
+     xlab="Date t", # x-axis label
+     ylab=expression(Stock~price~price[t])) # y-axis label
+plot(as.Date(price.rownames),price[,"RWE"],type="l",
+     main="RWE stock price data", # title
+     xlab="Date t", # x-axis label
+     ylab=expression(Stock~price~price[t])) # y-axis label
+```
+
+
+```{r}
+
+## Here we can compute two items
+## together: log price differences,
+## and their range (to ound a plot)
+return.range <- range(return.series <- apply(log(price),2,diff)) # compute log-returns and range
+return.range
+plot(return.series , xlim=return.range, ylim=return.range, main="Risk Factor Changes", cex=0.2)
+
+```
+
+```{r}
+
+## Margin = price_steel * tons - price_power * (rate_mwh/tons * tons)
+
+# Get last prices
+
+price.last <- as.numeric(tail(price,
+                              n=1))
+
+# Specify  the positions
+position.rf <- c(-30,10)
+
+# And compute the position weights
+w <- position.rf*price.last
+
+# Fan these across the length and
+# breadth of the risk factor series
+
+weights.rf <- matrix(w,nrow = nrow(return.series),
+                     ncol=ncol(return.series), byrow = TRUE)
+
+## We need to compute exp(x) -1 for
+## very small x: expm1 accomplishes
+## this
+
+loss.rf <- -rowSums(expm1(return.series)* weights.rf)
+
+summary(loss.rf)
+  
+```
+
+
+
+```{r}
+loss.rf.df <- data.frame(Loss=loss.rf,
+                         Distribution = rep("Historical",
+                                            each=length(loss.rf)))
+library(ggplot2)
+ggplot(loss.rf.df, aes(x=Loss, fill=Distribution)) +
+  geom_density(aplha=0.2)+ xlim(-100,100)
+
+```
+
+
+```{r}
+## Simple Value at Risk
+
+alpha.tolerance <-  0.99
+
+(VaR.hist <- quantile(loss.rf, probs=alpha.tolerance,
+                      names=FALSE))
+
+## Just as simple Expected shortfall
+
+(ES.hist <- mean(loss.rf[loss.rf>VaR.hist]))
+
+VaR.text <- paste("Value at Risk=",
+                  round(VaR.hist,2))
+
+ES.text <- paste("Expected Shortfall =",
+                  round(ES.hist,2))
+
+ggplot(loss.rf.df,aes(x=Loss, fill=Distribution))+
+  geom_density(alpha=0.2) + geom_vline(aes(xintercept= VaR.hist),
+  linetype="dashed", size=1, color="blue")+
+  geom_vline(aes(xintercept=ES.hist),
+      size=1, color="blue") + xlim(0,
+      200) + annotate("text",x=40,y=0.03,
+      label=VaR.text)+ annotate("text",
+      x=140,y=0.03,label=ES.text)
+  
+
+ggplot(loss.rf.df, aes(x=Distribution,
+        y=Loss)) + geom_boxplot(outlier.size = 1.5, 
+        outlier.shape = 21) + ylim(-250,
+        10)
+
+```
+
+
+```{r}
+
+library(mvtnorm)
+library(ggplot2)
+set.seed(1016)
+
+n.sim <- 1000
+z <- rnorm(n.sim)
+t <- rt(n.sim,df=5)
+alpha.tolerance <- 0.95
+
+(z.threshold <- qnorm(alpha.tolerance))
+
+```
+
+
+```{r}
+(t.threshold <- qt(alpha.tolerance,df=5))
+
+```
+
+```{r}
+zt.df <- data.frame(Deviations= c(z,
+          t), Distribution=rep(c("Gaussian","Student's t"), each=n.sim))
+
+ggplot(zt.df, aes(x=Deviations, fill=Distribution))+
+  geom_density(alpha=0.3)+ geom_vline(aes(xintercept=z.threshold),
+  color="red",linetype="dashed",
+  size=1) + geom_vline(aes(xintercept=t.threshold),
+  color="blue",linetype="dashed",
+  size=1)+ xlim(-3,3)
+```
+
+```{r}
+ggplot(zt.df,aes(x=Deviations,fill=Distribution)) +
+  geom_density(alpha=0.2)+ geom_vline(aes(xintercept=z.threshold),
+  color="red",linetype="dashed",
+  size=1) + geom_vline(aes(xintercept=t.threshold),
+  color="blue", linetype="dashed",
+  size=1) + xlim(1,5)
+```
+
+
+```{r}
+## Again computing returns as changes
+## in the risk factors
+
+return.series <-  apply(log(price),2,
+                        diff) # compute risk-factor changes
+
+price.last <- as.numeric(tail(price,
+                              n=1)) # reserve last price
+
+# Specify the positions
+position.rf <- c(-30,10) # As before
+
+# And compute the position weights
+# directly again as before
+
+(w <- position.rf*price.last)
+
+mu.hat <- colMeans(return.series) # Mean vector mu; estimated=hat
+Sigma.hat <- var(return.series) # Variance-covariance matrix Sigma
+(loss.mean <- -sum(w*mu.hat)) # Mean loss
+
+(loss.stdev <- sqrt(t(w) %*% Sigma.hat %*% w)) # Standard deviation of loss
+
+## Compute VaR and ES and return
+
+alpha.tolerance <- 0.95
+
+q.alpha <- qnorm(alpha.tolerance)
+(VaR.varcov <- loss.mean + loss.stdev *
+    q.alpha)
+
+(ES.varcov <- loss.mean+ loss.stdev *
+    dnorm(q.alpha)/(1-alpha.tolerance))
+
+```
+
+
+```{r}
+VaR.text <- paste("Value at Risk=",
+                  round(VaR.varcov,2))
+
+ES.text <- paste("Expected Shortfall=",
+                  round(ES.varcov,2))
+
+ggplot(loss.rf.df, aes(x=Loss, fill=Distribution))+
+  geom_density(alpha=0.2)+ geom_vline(aes(xintercept=VaR.varcov),
+  colour="red", size=1) + geom_vline(aes(xintercept= ES.varcov),
+  colour="blue", size =1)+ xlim(0,
+  200) + annotate("text",x=30, y=0.03, label =VaR.text) + annotate("text",
+  x=120,y=0.03, label=ES.text)
+
+```
+

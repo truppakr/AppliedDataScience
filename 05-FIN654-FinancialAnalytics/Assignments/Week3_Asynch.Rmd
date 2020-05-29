@@ -1,0 +1,327 @@
+---
+title: "Week3_Asynch"
+author: "Thulasiram Ruppa Krishnan"
+date: "July 16, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Libraries}
+library(fBasics)
+library(evir)
+library(qrmdata)
+library(zoo)
+data(OIL_Brent)
+str(OIL_Brent)
+
+library(quantreg)
+library(quantmod)
+library(matrixStats)
+```
+
+```{r Data Load}
+Brent.price <- as.zoo(OIL_Brent)
+Brent.return <- diff(log(Brent.price))[-1]*100
+colnames(Brent.return) <- "Brent.return"
+head(Brent.return,n=5)
+
+```
+```{r Plots}
+plot(Brent.return,title=FALSE,xlab="",main="Brent Daily % Change", col="blue")
+
+boxplot(as.vector(Brent.return),title=FALSE,main="Brent Daily % Change", col="blue",cex=0.5,pch=19)
+skewness(Brent.return)
+kurtosis(Brent.return)
+```
+
+
+```{r Autocorrelation}
+acf(coredata(Brent.return),main="Brent Daily Autocorrelogram",lag.max = 20,ylab="",xlab="",col="blue",ci.col="red")
+
+pacf(coredata(Brent.return),main="Brent Daily Partial Autocorrelogram",lag.max = 20,ylab="",xlab="",col="blue",ci.col="red")
+
+```
+
+```{r}
+Brent.return.abs <- abs(Brent.return)
+#Trading position size matters
+Brent.return.tail <- tail(Brent.return.abs[order(Brent.return.abs)],100)[1]
+
+# Take just the first of the 100
+# observations and pick the first
+
+index <- which(Brent.return.abs>Brent.return.tail,arr.ind = TRUE)
+
+# Build an index of those sizes that
+# exceed the heavy tail threshold
+
+Brent.return.abs.tail <- timeSeries(rep(0,length(Brent.return)),charvec = time(Brent.return))
+
+# just a lot of zeros we will fill up
+# next
+
+Brent.return.abs.tail[index,1] <- Brent.return.abs[index]
+
+# Aphew! is in order
+
+plot(Brent.return.abs,title=FALSE,main="Brent Daily Return Sizes",col="blue")
+
+acf(coredata(Brent.return.abs),main="Brent Daily Autocorrelogram",lag.max = 20,ylab="",xlab="",col="blue",ci.col="red")
+
+pacf(coredata(Brent.return.abs),main="Brent Daily Partial Autocorrelogram",lag.max = 20,ylab="",xlab="",col="blue",ci.col="red")
+
+```
+
+```{r}
+data("EuStockMarkets")
+EuStockMarkets.price <- as.zoo(EuStockMarkets)
+EuStockMarkets.return <- diff(log(EuStockMarkets.price))[-1]*100
+
+plot(EuStockMarkets.price,xlab="",main="")
+plot(EuStockMarkets.return,xlab="",main="")
+
+ccf(EuStockMarkets.return[,1],EuStockMarkets.return[,2],main="Returns DAX Vs CAC",lag.max = 20,ylab="",xlab="",col="blue",ci.col="red")
+
+ccf(abs(EuStockMarkets.return[,1]),abs(EuStockMarkets.return[,2]),main="Absolute Returns DAX Vs CAC",lag.max = 20,ylab="",xlab="",col="blue",ci.col="red")
+
+```
+
+
+
+```{r Functions}
+corr.rolling <- function(x){
+  dim <- ncol(x)
+  corr.r <- cor(x)[lower.tri(diag(dim),diag=FALSE)]
+  return <- corr.r
+}
+
+fisher <- function(r){
+  0.5 * log((1+r)/(1-r))
+}
+```
+
+
+```{r}
+corr.returns <- rollapply(EuStockMarkets.return, width=250,corr.rolling,align = "right",by.column = FALSE)
+
+colnames(corr.returns) <- c("DAX & CAC","DAX & SMI","DAX & FTSE","CAC & SMI","CAC & FTSE","SMI & FTSE")
+plot(corr.returns,xlab="", main="" )
+
+
+```
+
+
+
+```{r}
+tickers <- c("ELE.MC","IBE.MC","REP.MC")
+getSymbols(tickers)
+```
+
+```{r}
+REP.r <- diff(log(REP.MC[,4]))[-1]
+IBE.r <- diff(log(IBE.MC[,4]))[-1]
+ELE.r <- diff(log(ELE.MC[,4]))[-1]
+
+ALL.r <- merge(REP=REP.r,IBE=IBE.r,ELE=ELE.r,all=FALSE)
+```
+
+```{r}
+plot(ALL.r)
+
+par(mfrow=c(2,1))
+acf(ALL.r)
+
+par(mfrow=c(2,1))
+acf(abs(ALL.r))
+
+
+par(mfrow=c(2,1))
+pacf(ALL.r)
+
+par(mfrow=c(2,1))
+pacf(abs(ALL.r))
+
+```
+
+```{r}
+
+R.corr <- apply.monthly(ALL.r,FUN=cor)
+R.vols <- apply.monthly(ALL.r,FUN=colSds) # from matrixStats
+
+head(R.corr,3)
+head(R.vols,3)
+
+
+```
+
+
+```{r Correlation Matrix}
+R.corr.1 <- matrix(R.corr[1,],nrow=3,ncol=3,byrow = FALSE)
+rownames(R.corr.1) <- tickers
+colnames(R.corr.1) <- tickers
+head(R.corr.1)
+```
+
+```{r}
+R.corr <- R.corr[,c(2,3,6)]
+colnames(R.corr) <- c("ELE.IBE","ELE.REP","IBE.REP")
+colnames(R.vols) <- c("ELE.vols","IBE.vols","REP.vols")
+
+head(R.corr,3)
+head(R.vols,3)
+
+
+R.corr.vols <- merge(R.corr,R.vols)
+
+plot.zoo(merge(R.corr.vols))
+```
+
+```{r}
+ELE.vols <- as.numeric(R.vols[,"ELE.vols"])
+IBE.vols <- as.numeric(R.vols[,"IBE.vols"])
+REP.vols <- as.numeric(R.vols[,"REP.vols"])
+
+length(ELE.vols)
+
+rho.fisher <- matrix(fisher(as.numeric(R.corr.vols[,1:3])),nrow = length(ELE.vols),ncol = 3,byrow = FALSE)
+
+```
+
+
+```{r}
+taus <- seq(0.05,0.95,0.05)
+
+fit.rq.ELE.IBE <- rq(rho.fisher[,1]~ELE.vols,tau=taus)
+
+fit.lm.ELE.IBE <- lm(rho.fisher[,1]~ELE.vols,tau=taus)
+
+plot(summary(fit.rq.ELE.IBE),parm="ELE.vols")
+
+taus1 <- c(0.05,0.95) # fit the confidence interval CI
+
+plot(ELE.vols,rho.fisher[,1],xlab="ELE.vol",ylab="ELE.IBE")
+abline(fit.lm.ELE.IBE,col="red")
+for (i in (1:length(taus1))){
+  # these lines will be the CI
+  abline(rq(rho.fisher[,1]~ELE.vols, tau = taus1[i]),col="blue")
+}
+grid()
+
+```
+
+
+```{r}
+
+name <- "GNP"
+
+URL <- paste("http://research.stlouisfed.org/fred2/series/",name,"/","downloaddata/",name,".csv",sep="")
+download <- read.csv(URL)
+
+hist(download[,2])
+summary(download[,2])
+
+```
+
+
+```{r}
+GNP <- ts(download[1:84,2]/1000,start = c(1995,1),freq=4)
+GNP.rate <- 100*diff(log(GNP))
+
+plot(GNP,type =l,main="US GNP Level")
+
+plot(GNP.rate, type ="h", main="GNP quarterly growth rates")
+abline(h=0,col="darkgray")
+
+par(mfrow=c(2,1))
+acf((GNP))
+par(mfrow=c(2,1))
+pacf(GNP)
+
+par(mfrow=c(2,1))
+acf((GNP.rate))
+par(mfrow=c(2,1))
+acf(abs(GNP.rate))
+
+
+par(mfrow=c(2,1))
+pacf(GNP.rate)
+pacf(abs(GNP.rate))
+par(mfrow=c(1,1)) # default setting
+
+```
+
+
+```{r ARIMA}
+
+fit.rate <- arima(GNP.rate,order = c(2,0,1),method = "ML")
+
+fit.rate
+
+
+fit.rate.2 <- arima(GNP.rate,order = c(2,0,0),method = "ML")
+
+fit.rate.2
+
+
+GNP.resid <- resid(fit.rate)
+hist(GNP.resid,probability = TRUE,breaks = "FD",xlim= c(-1.5,1.5),col="steelblue",border = "white")
+x=seq(-2,2,length=100)
+lines(x,dnorm(x,mean=mean(GNP.resid),sd=sd(GNP.resid)),col="orange",lwd=2)
+
+qqnorm(GNP.resid)
+qqline(GNP.resid)
+
+
+par(mfrow=c(2,1))
+acf((GNP.resid))
+acf(abs(GNP.resid))
+par(mfrow=c(1,1)) # default setting
+
+
+par(mfrow=c(2,1))
+pacf(GNP.resid)
+pacf(abs(GNP.resid))
+
+skewness(GNP.resid)
+kurtosis(GNP.resid)
+
+(GNP.pred <- predict(fit.rate,n.ahead = 8))
+
+```
+
+
+```{r}
+
+acf(REP.r,1)
+
+set.seed(1016)
+acf.coeff.sim <- replicate(2500,acf(sample(REP.r,size=2500,replace=FALSE),lag=2,plot=FALSE)$acf[2])
+summary(acf.coeff.sim)
+
+hist(acf.coeff.sim,probability = TRUE,breaks = "FD",xlim = c(0.04,0.05),col="steelblue",border = "white")
+
+
+# At 95% tolerence level
+quantile(acf.coeff.sim,probs=c(0.025,0.975))
+
+# At 99% tolerence level
+quantile(acf.coeff.sim,probs=c(0.005,0.995))
+
+#And the
+(t.sim <- mean(acf.coeff.sim)/sd(acf.coeff.sim))
+
+(1-pt(t.sim,df=2))
+```
+
+
+```{r}
+plot(density(acf.coeff.sim),col="blue")
+abline(v=0)
+abline(v=quantile(acf.coeff.sim,probs=c(0.025,0.975)),lwd=2,col="red")
+abline(v=acf(REP.r,1,plot=FALSE)$acf[2],lty=2,lwd=4,col="orange")
+
+```
+

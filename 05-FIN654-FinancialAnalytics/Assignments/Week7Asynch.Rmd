@@ -1,0 +1,176 @@
+---
+title: "Week7_Asynch"
+author: "Thulasiram Ruppa Krishnan"
+date: "August 14, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+require(qrmdata)
+require(xts)
+
+# The exchange rate data was obtained
+# from OANDA (http://www.oanda.com)
+# on 2016-01-03
+
+data("EUR_USD")
+data("GBP_USD")
+
+# The Brent data was obtained from
+# Federal Reserve Economics Data
+# (FRED) via Quandl on 2016-01-03
+
+data("OIL_Brent")
+
+data.1 <- na.omit(merge(EUR_USD,GBP_USD,OIL_Brent))
+
+R <- na.omit(diff(log(data.1))*100)
+
+names.R <- c("EUR_USD","GBP_USD","OIL_Brent")
+colnames(R) <- names.R
+
+(mean.R <- apply(R,2,mean))
+
+summary(R)
+
+(1+mean.R[3]/100)^252-1
+```
+
+```{r}
+(cov.R <- cov(R))
+(sd.R <- sqrt(diag(cov.R)))
+
+(sigma <-array(c(0.20, 0.15, 0.40),dim=c(3,1)))
+(sigma.t <- t(sigma))
+
+ rho <- c(1.0,0.2,0.6,0.2,1.0,0.4,0.6,0.4,1.0)
+ 
+ (rho <- array(rho,dim=c(3,3)))
+ 
+ (Sigma <- (sigma %*% sigma.t)*rho)
+ 
+ 
+ w <- c(-0.5,-0.5,1)
+ mu <- c(0.12,-0.09,0.15)
+ 
+ (mu.P <- t(w) %*% mu)
+ 
+ 
+```
+
+```{r}
+(Sigma.P <- (t(w) %*% Sigma %*% w))^0.5
+```
+
+```{r}
+library(quadprog)
+
+Amat <- cbind(rep(1,3),mean.R) # set the equality constraint matrix
+
+mu.P <- seq(min(mean.R-5e-04),max(mean.R+5e-04),length=300) # set of 300 possible target portfolio returns
+
+sigma.P <- mu.P # set up storage for std dev's of portfolio returns
+
+weights <- matrix(0,nrow=300, ncol=ncol(R))
+colnames(weights) <- names.R
+
+for(i in 1:length(mu.P)){
+  
+  bvec = c(1,mu.P[i]) # constraint vector
+  
+  result = solve.QP(Dmat = 2*cov.R,dvec=rep(0,3), Amat = Amat, bvec=bvec,meq = 2)
+  
+  sigma.P[i]= sqrt(result$value)
+  weights[i,]=result$solution
+  
+}
+```
+
+```{r}
+par(mfrow=c(1,1))
+plot(sigma.P,mu.P,type="l",xlim=c(0,max(sd.R)*1.1), ylim=c(0,max(mean.R)*1.1),lty=3,lwd=3) # plot
+
+# the efficient frontier (and
+# inefficient portfolios below the
+# min var portfolio)
+
+mu.free= 1.3/253 # input value of risk-free interest rate
+points(0,mu.free,cex=1,pch="+") # show risk-free asset
+sharpe= (mu.P-mu.free)/sigma.P # compute Sharpe's ratio
+ind=(sharpe==max(sharpe)) # Find the maximum Sharpe's ratio
+options(digits=3)
+lines(c(0,2),mu.free+ c(0,2) * (mu.P[ind]-mu.free)/sigma.P[ind],lwd=4,lty=1,col="blue")
+# show lines of optimal portfolios
+points(sigma.P[ind],mu.P[ind],cex=4,pch="*") # show tangency portfolio
+
+ind2=(sigma.P==min(sigma.P)) # find the minimum variance portfolio
+points(sigma.P[ind2],mu.P[ind2], cex=2, pch="+") # show min var portfolio
+
+ind3=(mu.P>mu.P[ind2]) # finally the efficient frontier
+
+lines(sigma.P[ind3],mu.P[ind3],type="l",
+      xlim=c(0,max(sd.R)*1.1), ylim=c(min(mean.R)*1.05,max(mean.R)*1.1),lwd=3,col="red") # plot the efficient frontier
+text(sd.R[1],mean.R[1],"EUR.USD",cex=1.15)
+text(sd.R[2],mean.R[2],"GBP.USD",cex=1.15)
+text(sd.R[3],mean.R[3],"OIL_Brent",cex=1.15)
+("*")
+```
+```{r}
+
+
+library(quadprog)
+
+Amat <- cbind(rep(1,3),mean.R,diag(1,nrow = 3)) # set the equality constraint matrix
+
+mu.P <- seq(min(mean.R)+0.0001,max(mean.R)-0.0001,length=300) # set of 300 possible target portfolio returns
+
+sigma.P <- mu.P # set up storage for std dev's of portfolio returns
+
+weights <- matrix(0,nrow=300, ncol=ncol(R))
+colnames(weights) <- names.R
+
+for(i in 1:length(mu.P)){
+  
+  bvec = c(1,mu.P[i],rep(0,3)) # constraint vector
+  
+  result = solve.QP(Dmat = 2*cov.R,dvec=rep(0,3), Amat = Amat, bvec=bvec,meq = 2)
+  
+  sigma.P[i]= sqrt(result$value)
+  weights[i,]=result$solution
+  
+}
+par(mfrow=c(1,1))
+plot(sigma.P,mu.P,type="l",xlim=c(0,max(sd.R)*1.1), ylim=c(0,max(mean.R)*1.1),lty=3,lwd=3) # plot
+
+# the efficient frontier (and
+# inefficient portfolios below the
+# min var portfolio)
+
+mu.free= 1.3/253 # input value of risk-free interest rate
+points(0,mu.free,cex=1,pch="+") # show risk-free asset
+sharpe= (mu.P-mu.free)/sigma.P # compute Sharpe's ratio
+ind=(sharpe==max(sharpe)) # Find the maximum Sharpe's ratio
+options(digits=3)
+lines(c(0,2),mu.free+ c(0,2) * (mu.P[ind]-mu.free)/sigma.P[ind],lwd=4,lty=1,col="blue")
+# show lines of optimal portfolios
+points(sigma.P[ind],mu.P[ind],cex=4,pch="*") # show tangency portfolio
+
+ind2=(sigma.P==min(sigma.P)) # find the minimum variance portfolio
+points(sigma.P[ind2],mu.P[ind2], cex=2, pch="+") # show min var portfolio
+
+ind3=(mu.P>mu.P[ind2]) # finally the efficient frontier
+
+lines(sigma.P[ind3],mu.P[ind3],type="l",
+      xlim=c(0,max(sd.R)*1.1), ylim=c(min(mean.R)*1.05,max(mean.R)*1.1),lwd=3,col="red") # plot the efficient frontier
+text(sd.R[1],mean.R[1],"EUR.USD",cex=1.15)
+text(sd.R[2],mean.R[2],"GBP.USD",cex=1.15)
+text(sd.R[3],mean.R[3],"OIL_Brent",cex=1.15)
+
+
+
+```
+
