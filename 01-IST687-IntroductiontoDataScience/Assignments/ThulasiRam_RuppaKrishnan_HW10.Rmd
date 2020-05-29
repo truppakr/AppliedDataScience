@@ -1,0 +1,312 @@
+---
+title: "HW10"
+author: "Thulasiram Ruppa Krishnan"
+date: "March 25, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Required Libraries}
+library(tm)
+library(wordcloud)
+library(ggplot2)
+```
+
+```{r Load Positive/Negative Keywords}
+# Clear objects
+rm(list=ls())
+
+
+pos <- "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 687/opinion-lexicon-English/positive-words.txt"
+neg <- "C:/Users/rkrishnan/Documents/01 Personal/MS/IST 687/opinion-lexicon-English/negative-words.txt" 
+
+# read the files
+p <- scan(pos,character(0),sep = "\n") 
+n <- scan(neg,character(0),sep = "\n")
+
+#remove the 1st 34 lines (Header Info)
+
+p <- p[-1:-34]
+n <- n[-1:-34]
+
+head(p,10)
+head(n,10)
+
+```
+
+```{r Load and clean Anthony Speech}
+
+sbaFile <- "http://www.historyplace.com/speeches/anthony.htm"
+
+sba <- readLines(sbaFile)
+
+str(sba)
+
+# Text Transformation
+
+words.vec <-VectorSource(sba)
+
+words.corpus <-Corpus(words.vec)
+
+words.corpus
+
+words.corpus <- tm_map(words.corpus,content_transformer(tolower))
+words.corpus <- tm_map(words.corpus,removePunctuation)
+words.corpus <- tm_map(words.corpus,removeNumbers)
+words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+
+```
+
+```{r Term Document Matrix}
+
+tdm <-TermDocumentMatrix(words.corpus)
+tdm
+m <-as.matrix(tdm)
+wordCounts <- rowSums(m)
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+head(wordCounts)
+cloudFrame <-data.frame(word=names(wordCounts),freq=wordCounts)
+wordcloud(cloudFrame$word,cloudFrame$freq)
+
+wordcloud(names(wordCounts),wordCounts,min.freq = 2,max.words = 50,rot.per = 0.35,colors = brewer.pal(8,"Dark2"))
+```
+
+```{r Sentiment Analysis}
+
+#calculate the total number of words
+totalwords <- sum(wordCounts)
+
+#have a vector that just has all the words
+words <-names(wordCounts)
+matched <- match(words,p,nomatch=0)
+head(matched,10)
+matched[6]
+p[1528]
+words[6]
+  
+mCounts <-wordCounts[which(matched !=0)]
+length(mCounts)
+
+mWords <- names(mCounts)
+nPos <- sum(mCounts)
+nPos
+
+
+matched <- match(words,n,nomatch=0)
+head(matched,100)
+matched[56]
+n[750]
+words[56]
+  
+nCounts <-wordCounts[which(matched !=0)]
+length(nCounts)
+
+nWords <- names(nCounts)
+nNeg <- sum(nCounts)
+nNeg
+
+```
+
+```{r Calculate the Sentiment}
+
+# calculate the % of words that are positive and negative
+totalWords <-length(words)
+
+ratioPos <-nPos/totalWords
+ratioPos
+
+ratioNeg <-nNeg/totalWords
+ratioNeg
+
+```
+
+
+```{r Load AFFIN}
+library(tidytext)
+sentiments
+affin <- get_sentiments("afinn")
+get_sentiments("bing")
+get_sentiments("nrc")
+
+# compute the overall score using AFFIN word list
+
+matched <-match(words,affin$word,nomatch=0)
+matched
+matched[13]
+words[13]
+affin$word[2323]
+affin$score[2323]
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+# Overall Score 
+totalScore
+pScore
+nScore
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+ratioNegScore
+
+```
+
+```{r Function to compute sentiment Score}
+
+
+fnGetSentimentScore <- function(words,i){
+  
+matched <-match(words,affin$word,nomatch=0)
+#print(paste("Matched :" ,matched))
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore.m[i] <<- sum(ifelse(mScore >0, mScore, 0))
+nScore.m[i] <<- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore.m[i] <<- sum(abs(mScore))
+
+print(paste(i," - 25% of the speech" ))
+print(paste("_________________________________" ))
+# Overall Score 
+print(paste("Total Score :" ,totalScore.m[i]))
+print(paste("Positive Score :" ,pScore.m[i]))
+print(paste("Negative Score :", nScore.m[i]))
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore.m[i] <<-pScore.m[i]/totalScore.m[i]
+ratioNegScore.m[i] <<-nScore.m[i]/totalScore.m[i]
+
+
+print(paste("Positive Score ratio :" ,ratioPosScore.m[i]))
+print(paste("Negative Score ratio :" ,ratioNegScore.m[i]))
+
+print(paste("_________________________________" ))
+
+}
+
+
+
+fnGetSentimentScore2 <- function(words,i){
+  
+matched <-match(words,affin$word,nomatch=0)
+#print(paste("Matched :" ,matched))
+
+
+wordCounts[which(matched !=0)]
+affin$word[matched[which(matched !=0)]]
+affin$score[matched[which(matched !=0)]]
+mScore <- affin$score[matched[which(matched !=0)]]
+
+pScore <- sum(ifelse(mScore >0, mScore, 0))
+nScore <- abs(sum(ifelse(mScore <0, mScore, 0)))
+totalScore <- sum(abs(mScore))
+
+print(paste(i," - 25% of the speech" ))
+# Overall Score 
+totalScore
+print(paste("Total Score :" ,totalScore))
+pScore
+print(paste("Positive Score :" ,pScore))
+nScore
+print(paste("Negative Score :", nScore))
+
+
+#ratio of  postive and negative  Score
+
+ratioPosScore <-pScore/totalScore
+ratioNegScore <-nScore/totalScore
+
+ratioPosScore
+print(paste("Positive Score ratio :" ,ratioPosScore))
+ratioNegScore
+print(paste("Negative Score ratio :" ,ratioNegScore))
+
+
+
+}
+
+
+```
+
+```{r Divide and Assign 25% of the Speech }
+
+# remove the sorting as we are computing 25% of the speech words on an incremental basis
+wordCounts <- rowSums(m)
+
+totalWords <-length(wordCounts)
+qtr_Words <- totalWords/4
+
+totalScore.m <-matrix(nrow = 4, ncol = 1)
+pScore.m <-matrix(nrow = 4, ncol = 1)
+nScore.m <-matrix(nrow = 4, ncol = 1)
+ratioPosScore.m <-matrix(nrow = 4, ncol = 1)
+ratioNegScore.m <-matrix(nrow = 4, ncol = 1)
+
+
+First.quarter.wordCounts <- wordCounts[1:94]
+First.quarter.words <-names(First.quarter.wordCounts)
+
+Second.quarter.wordCounts <- wordCounts[95:188]
+Second.quarter.words <-names(Second.quarter.wordCounts)
+
+Third.quarter.wordCounts <- wordCounts[189:282]
+Third.quarter.words <-names(Third.quarter.wordCounts)
+
+Fourth.quarter.wordCounts <- wordCounts[283:totalWords]
+Fourth.quarter.words <-names(Fourth.quarter.wordCounts)
+
+
+```
+
+```{r Compute Sentiment Score for each 25% of the speech}
+
+fnGetSentimentScore(First.quarter.words,1)
+fnGetSentimentScore(Second.quarter.words,2)
+fnGetSentimentScore(Third.quarter.words,3)
+fnGetSentimentScore(Fourth.quarter.words,4)
+
+#fnGetSentimentScore2(First.quarter.words,1)
+#fnGetSentimentScore2(Second.quarter.words,2)
+#fnGetSentimentScore2(Third.quarter.words,3)
+#fnGetSentimentScore2(Fourth.quarter.words,4)
+
+
+```
+
+```{r Plot Sentiment Score}
+
+speech.sentiment.score <- data.frame(cbind(c(1:4),totalScore.m,pScore.m,nScore.m,ratioPosScore.m,ratioNegScore.m))
+speech.sentiment.score <-`colnames<-`(speech.sentiment.score,c("Quarter","Total_Score","Positive_Score","Negative_Score","Positive_Ratio","Negative_Ratio"))
+
+ggplot() + geom_bar(data = speech.sentiment.score,aes(x=Quarter,y=Total_Score),stat="identity")+labs (x="Speech Quarters",y="Total Sentiment Score",title = "Total Sentiment Score by Quarters of Speech") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = speech.sentiment.score,aes(x=Quarter,y=Positive_Score),stat="identity")+labs (x="Speech Quarters",y="Positive Sentiment Score",title = "Positive Sentiment Score by Quarters of Speech") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = speech.sentiment.score,aes(x=Quarter,y=Negative_Score),stat="identity")+labs (x="Speech Quarters",y="Negative Sentiment Score",title = "Negative Sentiment Score by Quarters of Speech") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = speech.sentiment.score,aes(x=Quarter,y=Positive_Ratio),stat="identity")+labs (x="Speech Quarters",y="Positive Sentiment Ratio",title = "Positive Sentiment Ratio by Quarters of Speech") + theme(legend.position = "bottom") 
+
+ggplot() + geom_bar(data = speech.sentiment.score,aes(x=Quarter,y=Negative_Ratio),stat="identity")+labs (x="Speech Quarters",y="Negative Sentiment Ratio",title = "Negative Sentiment Ratio by Quarters of Speech") + theme(legend.position = "bottom") 
+
+```
+

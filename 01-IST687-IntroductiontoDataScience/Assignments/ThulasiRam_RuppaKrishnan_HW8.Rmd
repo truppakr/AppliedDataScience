@@ -1,0 +1,155 @@
+---
+title: "HW8"
+author: "Thulasiram Ruppa Krishnan"
+date: "March 10, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(RCurl)
+library(bitops)
+library(gdata)
+library(readxl)
+library(ggplot2)
+```
+
+
+```{r Import Data}
+##Thunder Basin Antelope Study
+
+##The data (X1, X2, X3, X4) are for each year.	
+##X1 = spring fawn count/100
+##X2 = size of adult antelope population/100
+##X3 = annual precipitation (inches)
+##X4 = winter severity index (1=mild,5=severe)
+mlr <- read_excel("C:/Users/rkrishnan/Documents/01 Personal/MS/IST 687/mlr01.xls")
+colnames(mlr) <-c("fawn_count","antelope_size","annual_precipitation","winter_severity")
+str(mlr)
+summary(mlr)
+
+```
+
+```{r Bivariate Antelope Size Vs Fawn Count}
+# Bivariate plot between fawn_count and other variables (antelope_size,precipitation,winter_severity)
+
+# Let's plot the relationship between  antelope_size and fawn_count
+lm_apVsfc <- lm(formula = mlr$fawn_count ~ mlr$antelope_size,data=mlr)
+plot(mlr$antelope_size,mlr$fawn_count,main ="Bivariate Plot between spring fawn count and size of adult antelope population",xlab = "Size of adult antelope population/100",ylab = "Spring fawn count/100",type = "p"  )
+abline(lm_apVsfc)
+
+# how they look in ggplot  using lm
+ggplot(data = mlr,aes(x=mlr$antelope_size,y=mlr$fawn_count))+labs(x="Size of adult antelope population/100",y="Spring fawn count/100",title = "Bivariate Plot between spring fawn count and size of adult antelope population") + geom_point() + geom_smooth(method="lm", color="red",size=1)
+
+# how they look in ggplot using loess
+ggplot(data = mlr,aes(x=mlr$antelope_size,y=mlr$fawn_count))+labs(x="Size of adult antelope population/100",y="Spring fawn count/100",title = "Bivariate Plot between spring fawn count and size of adult antelope population") + geom_point() + geom_smooth(method="loess", color="red",size=1)
+
+```
+
+```{r Bivariate Annual precipitation Vs Fawn Count}
+
+# Let's plot the relationship between Annual precipitation and fawn_count
+lm_pVsfc <- lm(formula = mlr$fawn_count ~ mlr$annual_precipitation,data=mlr)
+
+plot(mlr$annual_precipitation,mlr$fawn_count,main ="Bivariate Plot between spring fawn count and annual precipitation",xlab = "Annual precipitation(inches)",ylab = "Spring fawn count/100",type = "p"  )
+abline(lm_pVsfc)
+
+# how they look in ggplot  using lm
+ggplot(data = mlr,aes(x=mlr$annual_precipitation,y=mlr$fawn_count))+labs(x="Annual precipitation(inches)",y="Spring fawn count/100",title = "Bivariate Plot between spring fawn count and Annual precipitation") + geom_point() + geom_smooth(method="lm", color="red",size=1)
+
+# how they look in ggplot using loess
+ggplot(data = mlr,aes(x=mlr$annual_precipitation,y=mlr$fawn_count))+labs(x="Annual precipitation(inches)",y="Spring fawn count/100",title = "Bivariate Plot between spring fawn count and Annual precipitation") + geom_point() + geom_smooth(method="loess", color="red",size=1)
+
+```
+
+
+```{r Bivariate Winter severity index Vs Fawn Count}
+
+# Let's plot the relationship between winter severity index(1=mild,5=severe) and fawn_count
+lm_wiVsfc <- lm(formula = mlr$fawn_count ~ mlr$winter_severity,data=mlr)
+
+
+plot(mlr$winter_severity,mlr$fawn_count,main ="Bivariate Plot between spring fawn count and winter severity index",xlab = "Winter severity index(1=mild,5=severe)",ylab = "Spring fawn count/100",type = "p"  )
+abline(lm_wiVsfc)
+
+# how they look in ggplot  using lm
+ggplot(data = mlr,aes(x=mlr$winter_severity,y=mlr$fawn_count))+labs(x="Winter severity index(1=mild,5=severe)",y="Spring fawn count/100",title = "Bivariate Plot between spring fawn count and Winter severity index") + geom_point() + geom_smooth(method="lm", color="red",size=1)
+
+# how they look in ggplot using loess
+ggplot(data = mlr,aes(x=mlr$winter_severity,y=mlr$fawn_count))+labs(x="Winter severity index(1=mild,5=severe)",y="Spring fawn count/100",title = "Bivariate Plot between spring fawn count and Winter severity index") + geom_point() + geom_smooth(method="loess", color="red",size=1)
+
+```
+
+
+```{r  Regression}
+
+# Regression Model, 	predict	the	number	of	fawns	from	Antelope Size
+sum.lm_apVsfc <- summary(lm_apVsfc)
+paste("p values:")
+sum.lm_apVsfc$coef[,4]
+paste("Adjusted R squared: " ,sum.lm_apVsfc$adj.r.squared)
+
+# Regression Model, 	predict	the	number	of	fawns	from	Annual Precipitation
+sum.lm_pVsfc <- summary(lm_pVsfc)
+paste("p values:")
+sum.lm_pVsfc$coef[,4]
+paste("Adjusted R squared: " ,sum.lm_pVsfc$adj.r.squared)
+
+# Regression Model, 	predict	the	number	of	fawns	from Winter Severity Index
+sum.lm_wiVsfc <- summary(lm_wiVsfc)
+paste("p values:")
+sum.lm_wiVsfc$coef[,4]
+paste("Adjusted R squared: " ,sum.lm_wiVsfc$adj.r.squared)
+
+
+# Let's predict fawn count from two variables antelope_size and annual_precipitation
+lm_ap.pVsfc <- lm(formula = mlr$fawn_count ~ mlr$antelope_size + mlr$annual_precipitation,data=mlr)
+sum.lm_ap.pVsfc <- summary(lm_ap.pVsfc)
+paste("p values:")
+sum.lm_ap.pVsfc$coef[,4]
+paste("Adjusted R squared: " ,sum.lm_ap.pVsfc$adj.r.squared)
+
+# Addition of one more variable to annual_precipitation has increased the model accuracy from 86% to 87% from the original model with just antelope size
+
+# Let's predict fawn count from two variables antelope_size and winter_index
+
+lm_wi.pVsfc <- lm(formula = mlr$fawn_count ~ mlr$antelope_size + mlr$winter_severity,data=mlr)
+sum.lm_wi.pVsfc <- summary(lm_wi.pVsfc)
+paste("p values:")
+sum.lm_wi.pVsfc$coef[,4]
+paste("Adjusted R squared: " ,sum.lm_wi.pVsfc$adj.r.squared)
+
+# Addition of winter index to annual_precipitation has dropped the model accuracy from 86% to 84% from the original model with just antelope size
+
+# Let's predict fawn count from two variables annual_precipitation and winter_index
+
+lm_wi.apVsfc <- lm(formula = mlr$fawn_count ~ mlr$annual_precipitation + mlr$winter_severity,data=mlr)
+sum.lm_wi.apVsfc <- summary(lm_wi.apVsfc)
+paste("p values:")
+sum.lm_wi.apVsfc$coef[,4]
+paste("Adjusted R squared: " ,sum.lm_wi.apVsfc$adj.r.squared)
+
+# Addition of winter index to annual_precipitation has dropped the model accuracy from 86% to 84% from the original model with just antelope size
+
+# Let's predict fawn count from three variables antelope_size , annual_precipitation and winter index
+lm_ap.p.wiVsfc <- lm(formula = mlr$fawn_count ~ mlr$antelope_size + mlr$annual_precipitation + mlr$winter_severity,data=mlr)
+summary(lm_ap.p.wiVsfc)
+sum.lm_ap.p.wiVsfc <- summary(lm_ap.p.wiVsfc)
+paste("p values:")
+sum.lm_ap.p.wiVsfc$coef[,4]
+paste("Adjusted R squared: " ,sum.lm_ap.p.wiVsfc$adj.r.squared)
+
+
+# After we added the winter index to the model, accuracy has increased from 87% to 95% from the original model with just antelope size and annual_precipitation
+
+#Compare all the models 
+
+cat(paste("One Variable Prediction ", "Adjusted R squared for Antelope Size : ",sum.lm_apVsfc$adj.r.squared, "Adjusted R squared for Annual Precipitation: ",sum.lm_pVsfc$adj.r.squared , "Adjusted R squared for Winter Index: ",sum.lm_wiVsfc$adj.r.squared, "Two Variable Prediction ", "Adjusted R squared for Antelope Size and Annual Precipitation : ",sum.lm_ap.pVsfc$adj.r.squared, "Adjusted R squared for Antelope Size and Winter Index : ",sum.lm_wi.pVsfc$adj.r.squared, "Adjusted R squared for Annual Precipitaion and Winter Index : ",sum.lm_wi.apVsfc$adj.r.squared, "Three Variable Prediction ", "Adjusted R squared for Antelope Size, Annual Precipitation and Winter Index : ",sum.lm_ap.p.wiVsfc$adj.r.squared,sep='\n'  ))
+
+
+# The best predction with fewer variable is given by the model using Antelope Size and Annual Precipitation 
+
+```

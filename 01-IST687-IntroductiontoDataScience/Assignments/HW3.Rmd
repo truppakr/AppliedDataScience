@@ -1,0 +1,127 @@
+---
+title: "HW3 : Cleaning/munging\tDataframes : Thulasi Ram Ruppa Krishnan"
+output:
+  html_document: default
+  pdf_document: default
+Author: "Thulasi Ram Ruppa Krishnan"
+classoption: a4paper
+---
+
+
+```{r readStates}
+#Step	1:	Function	(named	readStates)	to	read	a	CSV	file	into	R
+readStates <- function(file,ex_rows,in_rows,header_flg,in_cols,in_col_nms)
+{
+# This function accepts a file name, number of rows to be imported in a dataset, number of cols, column names and the number of rows that needs to be excluded as parameters and create a data frame
+
+census <- data.frame(read.csv(file,header = header_flg, nrows = in_rows,skip = ex_rows,na.strings = "NA", strip.white = TRUE, stringsAsFactors = FALSE,blank.lines.skip = TRUE,col.names = in_col_nms)[,in_cols])
+
+return(census)
+}
+
+```
+
+
+```{r clean_dataframe}
+#Step	2:	Function to Clean	the	census dataframe
+clean_dataframe <- function(my_census)
+{
+# This function cleans the input census data frame 
+ds <- my_census[- c(1:5,57:58),]
+ds$stateName <- sub(".","",ds$stateName)
+ds$base2010 <- as.numeric(gsub(",","",ds$base2010))
+ds$base2011 <- as.numeric(gsub(",","",ds$base2011))
+ds$Jul2010 <- as.numeric(gsub(",","",ds$Jul2010))
+ds$Jul2011 <- as.numeric(gsub(",","",ds$Jul2011))
+row.names(ds)<-1:nrow(ds)
+return(ds)
+}
+```
+
+```{r invoke readStates}
+# load the census data from http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv into my_census data frame
+my_census<-readStates("http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv",4,58,FALSE,c(1:5),c("stateName", "base2010", "base2011","Jul2010","Jul2011","","","","",""))
+
+```
+
+```{r Invoke clean_dataframe and Store the dataframe}
+# Step	3:	Store	and	Explore	the	dataset
+# Clean the data frame by removing	unwanted columns and  rows,	change column	names, reset index, change mode 
+dfStates <- clean_dataframe(my_census)
+dfStates
+
+#mean	for	the	July2011	data
+mean(dfStates$Jul2011)
+```
+
+
+```{r Highest Population}
+# Step	4:	 Find	the	state	with	the	Highest	Population
+# Population of the State with Highest Population
+dfStates[which.max(dfStates$Jul2011),5]
+
+# Name of the State with Highest Population
+dfStates[which.max(dfStates$Jul2011),1]
+
+# Sort	the	data,	in	increasing	order,	based	on	the	July2011	data.	
+dfStates <- dfStates[order(dfStates$Jul2011),]
+```
+
+```{r Distribution Function 1}
+#Step	5:	 Explore	the	distribution	of	the	states
+# Method 1: function	that	takes	two	parameters.	The	first	is	a	vector	and	the	second	is	a	number
+
+StatesDist <- function (x,numbr)
+{
+if (is.vector(x))
+  { if (is.numeric(numbr)) 
+    {
+      return(length(which(x<numbr))/length(x))    
+    }
+  else return("Incorrect argument, Expected is a Number")
+  } else 
+  {
+        if (is.numeric(numbr)) 
+        {
+          return("Incorrect argument, Expected is a vector")
+        } else return("Incorrect arguments, Expected is a vector and a number") 
+  }
+  
+}
+
+```
+
+```{r Distribution Function 2}
+#Step	5:	 Explore	the	distribution	of	the	states
+# Method 2: function	that	takes	two	parameters.	The	first	is	a	vector	and	the	second	is	a	number
+
+StatesDist2 <- function (x,numbr)
+{
+if (is.vector(x))
+  { if (is.numeric(numbr)) 
+    {
+      return(ecdf(x)(numbr))
+    }
+  else return("Incorrect argument, Expected is a Number")
+  } else 
+  {
+        if (is.numeric(numbr)) 
+        {
+          return("Incorrect argument, Expected is a vector")
+        } else return("Incorrect arguments, Expected is a vector and a number") 
+  }
+  
+}
+
+```
+
+```{r Explore Distribution}
+# Test both	the	function using method 1 and 2	with	the	vector	'dfStates$Jul2011Num',	and	the	mean	of	dfStates$Jul2011Num'
+# Percentage of elements in dfStates$Jul2011 which are less than its mean
+
+StatesDist(dfStates$Jul2011,mean(dfStates$Jul2011))
+StatesDist2(dfStates$Jul2011,mean(dfStates$Jul2011))
+
+# From the above two methods of deriving percentage of elements within the vector that is less than the mean of the vector, It appears that method 2 is the best as it is uses inbuilt function ecdf whereas we are trying to dervie the formula in the method 1.
+```
+

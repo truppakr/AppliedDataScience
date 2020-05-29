@@ -1,0 +1,85 @@
+---
+title: "ThulasiRam_RuppaKrishnan_HW5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## JSON	&	tapply Homework:	Accident	Analysis
+
+```{r Load}
+#Step	1:	Load	the	data
+
+#Read	in	the	following	JSON	dataset
+#http://data.maryland.gov/api/views/pdvh-tf2u/rows.json?accessType=DOWNLOAD
+
+# load required libraries
+library(bitops)
+library(RCurl)
+library(jsonlite)
+library(RJSONIO)
+library(proto)
+library(gsubfn)
+library(RSQLite)
+library(sqldf)
+
+# load data
+mv_URL <- "http://data.maryland.gov/api/views/pdvh-tf2u/rows.json?accessType=DOWNLOAD"
+mvApiResult <- getURL(mv_URL)
+mvResults <- RJSONIO::fromJSON(mvApiResult)
+summary(mvResults)
+#summary(mvResults$data)
+mvData <-mvResults$data
+
+```
+
+```{r CleanDS}
+
+nullToNA <- function(x) {
+  x[sapply(x, is.null)] <- NA
+  return(x)
+}
+
+namesOfColumns <-
+  c("CASE_NUMBER","BARRACK","ACC_DATE","ACC_TIME","ACC_TIME_CODE","DAY_OF_WEEK","ROAD","INTERSECT_ROAD","DIST_FROM_INTERSECT","DIST_DIRECTION","CITY_NAME","COUNTY_CODE","COUNTY_NAME","VEHICLE_COUNT","PROP_DET","INJURY","COLLISION_WITH_1","COLLISION_WITH_2")
+
+mv_df <- data.frame(matrix(unlist(lapply(mvData,nullToNA)),nrow=length(mvResults$data),ncol = length(mvResults$data[[1]]),byrow = T), stringsAsFactors = FALSE)
+mv_df <- mv_df[,-c(1:8)]
+colnames(mv_df) <- namesOfColumns
+mv_df$DAY_OF_WEEK <-sapply(mv_df$DAY_OF_WEEK,trimws,which='right')
+View(mv_df)
+
+```
+
+```{r SQLDF}
+#Step	3:	Understand	the	data	using	SQL	(via	SQLDF)
+
+# How	many	accidents	happen	on	SUNDAY
+sqldf('select count(case_number) accidents_cnt from mv_df where (day_of_week) ="SUNDAY"')
+
+# How	many	accidents	had	injuries
+sqldf('select count(1) accidents_with_injury from mv_df where injury="YES" ')
+
+# List	the	injuries	by	day
+sqldf('select (day_of_week) day_of_week,count(1) injuries_cnt from mv_df where injury="YES" group by (day_of_week) order by case (day_of_week) when "SUNDAY" then 1 when "MONDAY" then 2 when "TUESDAY" then 3 when "WEDNESDAY" then 4 when "THURSDAY" then 5 when "FRIDAY" then 6 when "SATURDAY" then 7 end')
+
+
+```
+
+```{r TAPPLY}
+#Step	4:	Understand	the	data	using	tapply
+
+# How	many	accidents	happen	on	SUNDAY
+data.frame(`colnames<-`(matrix(tapply(mv_df$DAY_OF_WEEK, mv_df$DAY_OF_WEEK=='SUNDAY', length)[2]),"accidents_cnt"))
+
+# How	many	accidents	had	injuries
+data.frame(`colnames<-`(matrix(tapply(mv_df$CASE_NUMBER, mv_df$INJURY=='YES', length)[2]),"accidents_with_injury"))
+
+# List	the	injuries	by	day
+`colnames<-`(data.frame(tapply(mv_df[which(mv_df$INJURY=='YES'),][,1], mv_df[which(mv_df$INJURY=='YES'),][,which(colnames(mv_df)=="DAY_OF_WEEK")]  , length)),"injuries_cnt")
+
+
+```
+
