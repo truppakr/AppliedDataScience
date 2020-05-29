@@ -1,0 +1,343 @@
+Worker1:  A35X2QXIS7N1W1  worker1_labels:  [ 0  0 -1 -1  0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 0  0 -1 -1  1] 
+pairwise kappa:  0.6666666666666667
+
+Worker1:  A2NOAWVAVYAYOB  worker1_labels:  [-1  0 -1  0  1  1  1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 1  0 -1  0  0  1  1] 
+pairwise kappa:  0.5625
+
+Worker1:  A2RGIULFG1GWF5  worker1_labels:  [0 0 0 0 0 1 0 0 0 0 0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [1 1 1 1 0 0 1 1 1 0 0] 
+pairwise kappa:  -0.18918918918918926
+
+Worker1:  A23ONWDSVICDCY  worker1_labels:  [-1  1  0  0  0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [1 0 1 0 0] 
+pairwise kappa:  -0.0714285714285714
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 0  0 -1 -1  1] 
+Worker2:  A35X2QXIS7N1W1  worker2_labels:  [ 0  0 -1 -1  0] 
+pairwise kappa:  0.6666666666666667
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 1  0 -1  0  0  1  1] 
+Worker2:  A2NOAWVAVYAYOB  worker2_labels:  [-1  0 -1  0  1  1  1] 
+pairwise kappa:  0.5625
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [1 1 1 1 0 0 1 1 1 0 0] 
+Worker2:  A2RGIULFG1GWF5  worker2_labels:  [0 0 0 0 0 1 0 0 0 0 0] 
+pairwise kappa:  -0.18918918918918926
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [1 0 1 0 0] 
+Worker2:  A23ONWDSVICDCY  worker2_labels:  [-1  1  0  0  0] 
+pairwise kappa:  -0.0714285714285714
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [1 1 0 1 1 0 0 0] 
+Worker2:  A3J85WP15JFYW0  worker2_labels:  [0 0 0 1 0 1 0 1] 
+pairwise kappa:  -0.25
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [0 0 0 1 1] 
+Worker2:  AYYSG3O9FNU15  worker2_labels:  [1 0 0 0 1] 
+pairwise kappa:  0.16666666666666663
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [0 0 0 1 1 0 0 1] 
+Worker2:  A18WFPSLFV4FKY  worker2_labels:  [0 1 0 1 1 1 1 1] 
+pairwise kappa:  0.33333333333333337
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [1 1 1 0 1 0 1 1 1 1 0 0 1 0] 
+Worker2:  A18S7VHZ6X4F93  worker2_labels:  [-1  0 -1 -1  1 -1  1 -1  0  0  0 -1  0  0] 
+pairwise kappa:  0.05405405405405406
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [0 0 1 0 1 0 1] 
+Worker2:  A1IHI23KH87K5W  worker2_labels:  [1 1 1 1 1 0 1] 
+pairwise kappa:  0.2222222222222221
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [0 0 1 0 0 0] 
+Worker2:  A6FE2ZQNFW12V  worker2_labels:  [ 0  0  0 -1  1  0] 
+pairwise kappa:  -0.19999999999999996
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 1  0  0 -1  1  1  0  0  0] 
+Worker2:  A9E9L9MWEZOPN  worker2_labels:  [ 1 -1  0  1  1  1 -1  1  1] 
+pairwise kappa:  0.19642857142857129
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [-1 -1  1  1  1] 
+Worker2:  A35LE1VA9TK5NL  worker2_labels:  [-1 -1  0  1  0] 
+pairwise kappa:  0.4444444444444444
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 0  1  1  0  0  1 -1  0  1  1  1  1] 
+Worker2:  A30MP4LXV4MIFD  worker2_labels:  [ 1  0  0  0  0  1 -1  0  1  1  0  0] 
+pairwise kappa:  0.31034482758620685
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [1 1 1 0 1 0 0 0 0 1] 
+Worker2:  A1WAWEY2810TFN  worker2_labels:  [1 1 1 0 0 0 0 0 0 1] 
+pairwise kappa:  0.8
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [-1  0  1  0  0  0  1  1 -1  0] 
+Worker2:  A3DOHO295ZBORZ  worker2_labels:  [-1 -1 -1 -1  0  1  0 -1 -1  1] 
+pairwise kappa:  0.02777777777777779
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 0  0  0 -1  0  0 -1  0 -1  0  0  0  1  0  0  1  1  1  0  0  1  0  0  0  1  0  1  1  1  1  0  0  1  1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [1 0 0 1 0] 
+Worker2:  A364DIPOOLWZ1J  worker2_labels:  [1 1 0 1 1] 
+pairwise kappa:  0.2857142857142857
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 0  1  0  0  0  1 -1] 
+Worker2:  A2EBVO9Y928XB6  worker2_labels:  [0 0 0 0 0 0 0] 
+pairwise kappa:  0.0
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 1 -1  0  0  0  1 -1 -1  0] 
+Worker2:  AM4PAC2YQPREB  worker2_labels:  [-1  0 -1  1  0  1 -1 -1 -1] 
+pairwise kappa:  0.16666666666666663
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [1 0 1 1 1 1 0 0 1 1] 
+Worker2:  AJY5G987IRT25  worker2_labels:  [ 1  1  1 -1  1  1  1  1  1  1] 
+pairwise kappa:  -0.08108108108108092
+
+Worker1:  A2YO837C0O1E91  worker1_labels:  [ 1  0  0 -1  0  0  0  0  1  1  1  1  0  1  0  0  0  0  1  0  1  1  1  0  0  1  0] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [-1 -1 -1  1 -1 -1 -1 -1  0 -1  0  0  0 -1 -1  1  1 -1  0  0 -1 -1 -1  0 -1  0 -1] 
+pairwise kappa:  -0.15714285714285725
+
+Worker1:  A3J85WP15JFYW0  worker1_labels:  [0 0 0 1 0 1 0 1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [1 1 0 1 1 0 0 0] 
+pairwise kappa:  -0.25
+
+Worker1:  A3J85WP15JFYW0  worker1_labels:  [0 0 1 1 0 0] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  AZJTQ7YZP1JSK  worker1_labels:  [0 1 1 1 1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  AYYSG3O9FNU15  worker1_labels:  [1 0 0 0 1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [0 0 0 1 1] 
+pairwise kappa:  0.16666666666666663
+
+Worker1:  A18WFPSLFV4FKY  worker1_labels:  [0 1 0 1 1 1 1 1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [0 0 0 1 1 0 0 1] 
+pairwise kappa:  0.33333333333333337
+
+Worker1:  A18WFPSLFV4FKY  worker1_labels:  [1 1 1 1 1] 
+Worker2:  A9E9L9MWEZOPN  worker2_labels:  [ 1  1 -1  1  1] 
+pairwise kappa:  0.0
+
+Worker1:  A18WFPSLFV4FKY  worker1_labels:  [ 0 -1  1  1  1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A18S7VHZ6X4F93  worker1_labels:  [-1  0 -1 -1  1 -1  1 -1  0  0  0 -1  0  0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [1 1 1 0 1 0 1 1 1 1 0 0 1 0] 
+pairwise kappa:  0.05405405405405406
+
+Worker1:  A18S7VHZ6X4F93  worker1_labels:  [-1  1 -1  0  0  0] 
+Worker2:  A30MP4LXV4MIFD  worker2_labels:  [1 0 1 1 1 0] 
+pairwise kappa:  -0.15384615384615397
+
+Worker1:  A18S7VHZ6X4F93  worker1_labels:  [-1 -1  1 -1  1 -1  0  0  0] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A18S7VHZ6X4F93  worker1_labels:  [ 0 -1  0 -1  0  0] 
+Worker2:  AM4PAC2YQPREB  worker2_labels:  [-1  1  1  1 -1  1] 
+pairwise kappa:  -0.125
+
+Worker1:  A18S7VHZ6X4F93  worker1_labels:  [ 0  0 -1 -1  0 -1] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [-1  0 -1  0 -1 -1] 
+pairwise kappa:  0.0
+
+Worker1:  A1IHI23KH87K5W  worker1_labels:  [1 1 1 1 1 0 1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [0 0 1 0 1 0 1] 
+pairwise kappa:  0.2222222222222221
+
+Worker1:  A6FE2ZQNFW12V  worker1_labels:  [ 0  0  0 -1  1  0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [0 0 1 0 0 0] 
+pairwise kappa:  -0.19999999999999996
+
+Worker1:  A9E9L9MWEZOPN  worker1_labels:  [ 1 -1  0  1  1  1 -1  1  1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 1  0  0 -1  1  1  0  0  0] 
+pairwise kappa:  0.1964285714285715
+
+Worker1:  A9E9L9MWEZOPN  worker1_labels:  [ 1  1 -1  1  1] 
+Worker2:  A18WFPSLFV4FKY  worker2_labels:  [1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A9E9L9MWEZOPN  worker1_labels:  [ 1  1 -1  1  1] 
+Worker2:  A1WAWEY2810TFN  worker2_labels:  [1 0 0 0 0] 
+pairwise kappa:  0.04761904761904767
+
+Worker1:  A9E9L9MWEZOPN  worker1_labels:  [1 1 0 1 1 1 1 1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A9E9L9MWEZOPN  worker1_labels:  [ 1  1  1 -1  1] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [-1  0  0  0  0] 
+pairwise kappa:  -0.04166666666666652
+
+Worker1:  A35LE1VA9TK5NL  worker1_labels:  [-1 -1  0  1  0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [-1 -1  1  1  1] 
+pairwise kappa:  0.4444444444444444
+
+Worker1:  A30MP4LXV4MIFD  worker1_labels:  [ 1  0  0  0  0  1 -1  0  1  1  0  0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 0  1  1  0  0  1 -1  0  1  1  1  1] 
+pairwise kappa:  0.31034482758620685
+
+Worker1:  A30MP4LXV4MIFD  worker1_labels:  [1 0 1 1 1 0] 
+Worker2:  A18S7VHZ6X4F93  worker2_labels:  [-1  1 -1  0  0  0] 
+pairwise kappa:  -0.15384615384615374
+
+Worker1:  A30MP4LXV4MIFD  worker1_labels:  [ 1  1  0  1  1 -1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A30MP4LXV4MIFD  worker1_labels:  [1 1 1 1 0] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [ 0 -1  0 -1 -1] 
+pairwise kappa:  -0.0869565217391306
+
+Worker1:  A1WAWEY2810TFN  worker1_labels:  [1 1 1 0 0 0 0 0 0 1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [1 1 1 0 1 0 0 0 0 1] 
+pairwise kappa:  0.8
+
+Worker1:  A1WAWEY2810TFN  worker1_labels:  [1 0 0 0 0] 
+Worker2:  A9E9L9MWEZOPN  worker2_labels:  [ 1  1 -1  1  1] 
+pairwise kappa:  0.04761904761904767
+
+Worker1:  A1WAWEY2810TFN  worker1_labels:  [1 1 1 0 0 0 1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A3DOHO295ZBORZ  worker1_labels:  [-1 -1 -1 -1  0  1  0 -1 -1  1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [-1  0  1  0  0  0  1  1 -1  0] 
+pairwise kappa:  0.02777777777777768
+
+Worker1:  A3DOHO295ZBORZ  worker1_labels:  [-1 -1 -1  0  1  0  1  1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A3DOHO295ZBORZ  worker1_labels:  [-1  0 -1 -1  1] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [-1  1 -1  0 -1] 
+pairwise kappa:  -0.0714285714285714
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 0  0  0 -1  0  0 -1  0 -1  0  0  0  1  0  0  1  1  1  0  0  1  0  0  0  1  0  1  1  1  1  0  0  1  1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1] 
+Worker2:  A3J85WP15JFYW0  worker2_labels:  [0 0 1 1 0 0] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1] 
+Worker2:  AZJTQ7YZP1JSK  worker2_labels:  [0 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1] 
+Worker2:  A18WFPSLFV4FKY  worker2_labels:  [ 0 -1  1  1  1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1 1 1 1] 
+Worker2:  A18S7VHZ6X4F93  worker2_labels:  [-1 -1  1 -1  1 -1  0  0  0] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1 1 1] 
+Worker2:  A9E9L9MWEZOPN  worker2_labels:  [1 1 0 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1] 
+Worker2:  A30MP4LXV4MIFD  worker2_labels:  [ 1  1  0  1  1 -1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1 1] 
+Worker2:  A1WAWEY2810TFN  worker2_labels:  [1 1 1 0 0 0 1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1 1 1] 
+Worker2:  A3DOHO295ZBORZ  worker2_labels:  [-1 -1 -1  0  1  0  1  1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1] 
+Worker2:  A2EBVO9Y928XB6  worker2_labels:  [0 0 0 0 0 0] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1] 
+Worker2:  AM4PAC2YQPREB  worker2_labels:  [ 0  1  0 -1  1 -1] 
+pairwise kappa:  0.0
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1 1] 
+Worker2:  AJY5G987IRT25  worker2_labels:  [1 1 1 1 1 1 1] 
+pairwise kappa:  nan
+
+Worker1:  A3NOXFQNEWTIDF  worker1_labels:  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [-1  1  0  0  1  1 -1 -1 -1 -1  0 -1 -1 -1  1 -1 -1  0] 
+pairwise kappa:  0.0
+
+Worker1:  A364DIPOOLWZ1J  worker1_labels:  [1 1 0 1 1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [1 0 0 1 0] 
+pairwise kappa:  0.2857142857142857
+
+Worker1:  A364DIPOOLWZ1J  worker1_labels:  [1 1 1 0 1 1] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [-1 -1 -1  0 -1 -1] 
+pairwise kappa:  0.1428571428571428
+
+Worker1:  A2EBVO9Y928XB6  worker1_labels:  [0 0 0 0 0 0 0] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 0  1  0  0  0  1 -1] 
+pairwise kappa:  0.0
+
+Worker1:  A2EBVO9Y928XB6  worker1_labels:  [0 0 0 0 0 0] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  AM4PAC2YQPREB  worker1_labels:  [-1  0 -1  1  0  1 -1 -1 -1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 1 -1  0  0  0  1 -1 -1  0] 
+pairwise kappa:  0.16666666666666663
+
+Worker1:  AM4PAC2YQPREB  worker1_labels:  [-1  1  1  1 -1  1] 
+Worker2:  A18S7VHZ6X4F93  worker2_labels:  [ 0 -1  0 -1  0  0] 
+pairwise kappa:  -0.125
+
+Worker1:  AM4PAC2YQPREB  worker1_labels:  [ 0  1  0 -1  1 -1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  AJY5G987IRT25  worker1_labels:  [ 1  1  1 -1  1  1  1  1  1  1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [1 0 1 1 1 1 0 0 1 1] 
+pairwise kappa:  -0.08108108108108092
+
+Worker1:  AJY5G987IRT25  worker1_labels:  [1 1 1 1 1 1 1] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1 1] 
+pairwise kappa:  nan
+
+Worker1:  AJY5G987IRT25  worker1_labels:  [1 1 1 1 1] 
+Worker2:  ACJPIVXUDSBKR  worker2_labels:  [ 0 -1  0  0 -1] 
+pairwise kappa:  0.0
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [-1 -1 -1  1 -1 -1 -1 -1  0 -1  0  0  0 -1 -1  1  1 -1  0  0 -1 -1 -1  0 -1  0 -1] 
+Worker2:  A2YO837C0O1E91  worker2_labels:  [ 1  0  0 -1  0  0  0  0  1  1  1  1  0  1  0  0  0  0  1  0  1  1  1  0  0  1  0] 
+pairwise kappa:  -0.15714285714285725
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [-1  0 -1  0 -1 -1] 
+Worker2:  A18S7VHZ6X4F93  worker2_labels:  [ 0  0 -1 -1  0 -1] 
+pairwise kappa:  0.0
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [-1  0  0  0  0] 
+Worker2:  A9E9L9MWEZOPN  worker2_labels:  [ 1  1  1 -1  1] 
+pairwise kappa:  -0.04166666666666674
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [ 0 -1  0 -1 -1] 
+Worker2:  A30MP4LXV4MIFD  worker2_labels:  [1 1 1 1 0] 
+pairwise kappa:  -0.0869565217391306
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [-1  1 -1  0 -1] 
+Worker2:  A3DOHO295ZBORZ  worker2_labels:  [-1  0 -1 -1  1] 
+pairwise kappa:  -0.0714285714285714
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [-1  1  0  0  1  1 -1 -1 -1 -1  0 -1 -1 -1  1 -1 -1  0] 
+Worker2:  A3NOXFQNEWTIDF  worker2_labels:  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1] 
+pairwise kappa:  0.0
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [-1 -1 -1  0 -1 -1] 
+Worker2:  A364DIPOOLWZ1J  worker2_labels:  [1 1 1 0 1 1] 
+pairwise kappa:  0.1428571428571428
+
+Worker1:  ACJPIVXUDSBKR  worker1_labels:  [ 0 -1  0  0 -1] 
+Worker2:  AJY5G987IRT25  worker2_labels:  [1 1 1 1 1] 
+pairwise kappa:  0.0
